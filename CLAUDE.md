@@ -32,6 +32,8 @@ node empty.js            # needs a static server on the port hardcoded in the fi
 
 There is no lint/build command; there are no bundler, transpiler, or type-checker configs.
 
+**Any UI change (markup, styles, layout) must be verified visually and shown to the user as screenshots before the task is considered done** — not just described in text. Render the real page (e.g. headless Chrome against `python3 -m http.server`) and capture the affected view(s).
+
 ## Architecture
 
 Three script files loaded as classic `<script>` tags (no ES modules) in this order: `js/logic.js` then `js/ui.js`.
