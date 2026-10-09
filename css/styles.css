@@ -89,6 +89,10 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .filters{display:flex;flex-wrap:wrap;gap:6px;min-width:0}
 .chip{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:5px 12px;font-size:13px}
 .chip.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tag-manage{display:flex;flex-wrap:wrap;gap:8px}
+.tag-pill{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:5px 5px 5px 12px;font-size:13px}
+.tag-pill button{width:22px;height:22px;border-radius:50%;border:0;background:var(--chip);color:var(--muted);display:grid;place-items:center;padding:0}
+.tag-pill button svg.i{width:13px;height:13px;stroke-width:2.2}
 
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .tile{background:var(--t-bg);color:var(--t-fg);border-radius:16px;padding:14px 14px 12px;min-height:156px;display:flex;flex-direction:column;gap:8px;cursor:pointer;min-width:0}

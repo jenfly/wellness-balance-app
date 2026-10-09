@@ -440,8 +440,17 @@
       '<div class="form-actions"><button class="btn" data-action="backup-drive"' + (ui.driveBusy ? ' disabled' : '') + '>Back up to Drive</button><button class="btn" data-action="restore-drive"' + (ui.driveBusy ? ' disabled' : '') + '>Restore</button></div>' +
       (ui.driveStatus ? '<p class="hint">' + esc(ui.driveStatus) + '</p>' : '') + '</section>';
   }
+  function tagsSectionHTML() {
+    var body = state.tags.length
+      ? '<div class="tag-manage">' + state.tags.map(function (t) {
+          return '<span class="tag-pill">' + esc(t) + '<button type="button" data-action="tag-delete" data-tag="' + esc(t) + '" aria-label="Delete tag ' + esc(t) + '">' + icon('x') + '</button></span>';
+        }).join('') + '</div>'
+      : '<p class="hint">No tags yet &mdash; add one from an item&rsquo;s edit form.</p>';
+    return '<section><h4>Tags</h4>' + body + '</section>';
+  }
   function settingsHTML() {
     return backupSectionHTML() +
+      tagsSectionHTML() +
       '<section><h4>Check-in reminder</h4><p class="hint">Well Tended shows a dot on the Check-in tab when it&rsquo;s been a while &mdash; no push notifications.</p>' +
       '<label class="fld"><span>Show a dot on the Check-in tab after</span><select id="s-dotdays">' + selOpts([[7, '7 days'], [10, '10 days'], [14, '14 days'], [21, '21 days'], [30, '30 days']], keepDays('checkinDotDays', 7)) + '</select></label></section>' +
       '<section><h4>Housekeeping</h4><label class="fld"><span>Remove done items from tiles after</span><select id="s-donekeep">' + selOpts([[7, '7 days'], [30, '30 days'], [90, '90 days'], [0, 'Never']], keepDays('doneKeepDays', 30)) + '</select></label>' +
@@ -709,6 +718,16 @@
       case 'fab': ui.formFor = null; ui.sheet = { kind: 'add', catId: ui.openCat || 'inbox' }; renderAll(); var f3 = $('#sheet-root #f-text'); if (f3) f3.focus(); break;
       case 'settings': ui.sheet = { kind: 'settings' }; ui.resetAsk = false; ui.showJson = false; ui.restoreOffer = null; ui.driveStatus = null; renderSheet(); break;
       case 'close-sheet': ui.sheet = null; ui.restoreOffer = null; ui.driveStatus = null; renderSheet(); break;
+      case 'tag-delete': {
+        var tg = t.dataset.tag;
+        takeSnapshot();
+        state.tags = state.tags.filter(function (x) { return x !== tg; });
+        state.items.forEach(function (x) { var ix = x.tags.indexOf(tg); if (ix >= 0) x.tags.splice(ix, 1); });
+        if (ui.tag === tg) ui.tag = null;
+        save(); renderAll();
+        toast('Deleted tag “' + tg + '”.', true);
+        break;
+      }
       case 'undo':
         if (snapshot) { var s = JSON.parse(snapshot); state.cats = s.cats; state.items = s.items; state.tags = s.tags; state.log = s.log; state.checkin = s.checkin; state.settings = s.settings; snapshot = null; save(); renderAll(); }
         $('#toast').hidden = true; break;
