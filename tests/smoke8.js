@@ -1,0 +1,17 @@
+const {JSDOM}=require('jsdom');const fs=require('fs');const assert=require('assert');
+const html='<!doctype html><html><body>'+fs.readFileSync('balance-tiles.html','utf8').replace(/<link[^>]*>/,'')+'</body></html>';
+const dom=new JSDOM(html,{runScripts:'dangerously',pretendToBeVisual:true,url:'https://example.com/'});
+const w=dom.window,d=w.document;w.scrollTo=()=>{};
+const click=s=>d.querySelector(s).dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
+assert(d.querySelectorAll('.tile h2 .cicon svg').length>=10);
+click('[data-action=toggle-edit]');
+click('[data-action=cat-icon-toggle]');
+assert(d.querySelector('.icon-grid'));
+d.querySelector('.ig[data-icon=heart]').dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
+assert(!d.querySelector('.icon-grid'));
+assert(JSON.parse(w.localStorage.getItem('well-tended-v1')).cats[0].icon==='heart');
+click('[data-action=cat-icon-toggle]');click('.ig[data-icon=""]');
+assert(JSON.parse(w.localStorage.getItem('well-tended-v1')).cats[0].icon===null);
+click('[data-action=toggle-edit]');click('[data-tab=checkin]');
+assert(d.querySelectorAll('.ci-ic').length===9);
+console.log('ok');

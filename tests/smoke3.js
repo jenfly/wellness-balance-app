@@ -1,0 +1,10 @@
+const {JSDOM}=require('jsdom');const fs=require('fs');const assert=require('assert');
+const html='<!doctype html><html><body>'+fs.readFileSync('balance-tiles.html','utf8').replace(/<link[^>]*>/,'')+'</body></html>';
+const dom=new JSDOM(html,{runScripts:'dangerously',pretendToBeVisual:true,url:'https://example.com/'});
+const w=dom.window,d=w.document;w.scrollTo=()=>{};
+d.querySelector('.tile[data-id=housework]').dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
+const lists=d.querySelectorAll('.overlay .items');assert.strictEqual(lists.length,2);
+assert(lists[0].textContent.includes('Mop')&&!lists[0].textContent.includes('Clean the oven'));
+assert(lists[1].textContent.includes('Clean the oven'));assert(d.querySelector('.sec-title').textContent==='Less frequent');
+assert.deepStrictEqual([...d.querySelectorAll('.tab > span:last-child')].map(x=>x.textContent),['Home','Upcoming','Ta-da','Check-in']);
+console.log('ok');
