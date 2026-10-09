@@ -43,4 +43,4 @@ Notes:
 - Restoring replaces the entire app state on this device (after showing what's in the backup and asking you to confirm) — it doesn't merge. Right after restoring, an "Undo" option briefly appears if you want the previous state back.
 
 ## Not built yet
-Real weekly push notifications (the settings toggle, day and time exist but don't send anything yet — see `HANDOFF.md`).
+Nothing currently — see `HANDOFF.md` for device-verification items still outstanding. (Real weekly push notifications were considered and dropped: no server means no reliable way to send them. The Check-in tab's in-app dot is the permanent reminder.)

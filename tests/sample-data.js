@@ -68,7 +68,7 @@ function seed() {
     tags: ['quick', 'active'],
     log,
     checkin,
-    settings: { day: 'Sunday', time: '18:00', notify: false }
+    settings: {}
   };
   })(H.today, H.addDays, H.uid);
 }

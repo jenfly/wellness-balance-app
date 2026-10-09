@@ -52,7 +52,8 @@
 
   function normalize(s) {
     s.version = 1;
-    s.tags = s.tags || []; s.checkin = Object.assign({ ratings: {}, at: null, notes: '' }, s.checkin || {}); s.log = s.log || []; s.settings = Object.assign({ day: 'Sunday', time: '18:00', notify: false }, s.settings || {});
+    s.tags = s.tags || []; s.checkin = Object.assign({ ratings: {}, at: null, notes: '' }, s.checkin || {}); s.log = s.log || []; s.settings = s.settings || {};
+    delete s.settings.notify; delete s.settings.day; delete s.settings.time;
     s.cats.forEach(function (c) { if (c.icon === undefined) c.icon = null; });
     return s;
   }
@@ -421,11 +422,8 @@
       (ui.driveStatus ? '<p class="hint">' + esc(ui.driveStatus) + '</p>' : '') + '</section>';
   }
   function settingsHTML() {
-    var on = !!state.settings.notify, dis = on ? '' : ' disabled';
-    var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(function (d) { return '<option' + (d === state.settings.day ? ' selected' : '') + '>' + d + '</option>'; }).join('');
     return backupSectionHTML() +
-      '<section><h4>Weekly check-in reminder</h4><label class="switch-row"><span>Remind me each week</span><span class="switch"><input type="checkbox" id="s-notify" role="switch"' + (on ? ' checked' : '') + '><span class="track"></span></span></label>' +
-      '<div class="inline"><select id="s-day" aria-label="Reminder day"' + dis + '>' + days + '</select><input id="s-time" type="time" value="' + esc(state.settings.time) + '" aria-label="Reminder time"' + dis + '></div><p class="hint">' + (on ? 'Saved here for the prototype. Real push notifications come with the PWA.' : 'Reminders are off. Turn them on to choose a day and time.') + '</p>' +
+      '<section><h4>Check-in reminder</h4><p class="hint">Well Tended shows a dot on the Check-in tab when it&rsquo;s been a while &mdash; no push notifications.</p>' +
       '<label class="fld"><span>Show a dot on the Check-in tab after</span><select id="s-dotdays">' + selOpts([[7, '7 days'], [10, '10 days'], [14, '14 days'], [21, '21 days'], [30, '30 days']], keepDays('checkinDotDays', 7)) + '</select></label></section>' +
       '<section><h4>Housekeeping</h4><label class="fld"><span>Remove done items from tiles after</span><select id="s-donekeep">' + selOpts([[7, '7 days'], [30, '30 days'], [90, '90 days'], [0, 'Never']], keepDays('doneKeepDays', 30)) + '</select></label>' +
       '<label class="fld"><span>Keep Ta-da history for</span><select id="s-logkeep">' + selOpts([[365, '1 year'], [730, '2 years'], [0, 'Forever']], keepDays('logKeepDays', 365)) + '</select></label>' +
@@ -714,9 +712,7 @@
       if (hk) { renderAll(); toast('Removed ' + plural(hk.items, 'done item') + (hk.logs ? ' and ' + plural(hk.logs, 'history entry').replace('entrys', 'entries') : ''), false); }
     } else if (t.id === 'up-rec') { state.settings.upRecurring = t.checked; save(); renderMain();
     } else if (t.name === 'up-group') { state.settings.upGroup = t.value; save(); renderMain();
-    } else if (t.id === 's-notify') { state.settings.notify = t.checked; save(); renderSheet(); }
-    else if (t.id === 's-day') { state.settings.day = t.value; save(); }
-    else if (t.id === 's-time') { state.settings.time = t.value; save(); }
+    }
   });
   document.addEventListener('submit', function (e) {
     var f = e.target.closest('form[data-form]');

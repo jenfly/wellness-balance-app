@@ -229,7 +229,7 @@ function emptyState() {
     ],
     tags: [], log: [],
     checkin: { ratings: {}, at: null, notes: '' },
-    settings: { day: 'Sunday', time: '18:00', notify: false }
+    settings: {}
   };
 }
 if (typeof module !== 'undefined') module.exports = { emptyState, today, addDays, uid, daysSince, checkinDue, ratingLabel, ratingGroups, entryIsRecurring, tadaEntries, fmtPast, pastBucket, purgeOld, clearDone, upcomingItems, dateBucket, openSorted, moveItem, completeItem, addFreq, isTucked, slotSort, doneItems, fmtDue, nextOrder, diffDays };

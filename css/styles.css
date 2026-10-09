@@ -253,7 +253,7 @@ body.dragging{cursor:grabbing;-webkit-user-select:none;user-select:none}
 .done-bar{display:flex;align-items:center;justify-content:space-between;margin-top:16px}
 .done-bar .done-toggle{margin-top:0}
 .tabicon{position:relative;display:inline-grid}
-.tabdot{position:absolute;top:-2px;right:-5px;width:10px;height:10px;border-radius:50%;background:var(--accent);border:2px solid var(--surface)}
+.tabdot{position:absolute;top:-3px;right:-6px;width:12px;height:12px;border-radius:50%;background:var(--apricot-dot);border:2px solid var(--surface)}
 .ci-head{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:46px}
 .ci-head .summary{margin:0}
 .ci-head .summary strong{font:600 20px var(--font-display)}

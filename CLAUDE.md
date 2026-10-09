@@ -53,14 +53,14 @@ Single JSON blob in `localStorage` under key `well-tended-v1`, written by `save(
   tags:   [string],                                   // free-form, created as you go
   log:    [{ id, itemId, text, catId, at, rec }],     // completion history for the Ta-da tab
   checkin:{ ratings: { [catId]: 0..100 }, at: ms|null, notes: string },
-  settings:{ day, time, notify, tadaDays, tadaRecurring, tadaGroup, upRecurring, upGroup,
+  settings:{ tadaDays, tadaRecurring, tadaGroup, upRecurring, upGroup,
              doneKeepDays, logKeepDays, checkinDotDays }
 }
 ```
 - `type`: `note` | `goal` | `todo` | `recurring`. Every category can hold any mix.
 - `due`: `YYYY-MM-DD` or null. `freq`: `{ n, unit: 'day'|'week'|'month'|'year' }` for recurring items.
 - Inbox is a virtual category: `INBOX` constant in `ui.js` (`id: 'inbox'`), always last, not draggable, not in `state.cats`. Items with `catId: 'inbox'` are uncategorized quick-adds.
-- Settings keys other than `day/time/notify` are read with fallbacks, not defaulted in `load()`. Defaults: ta-da window 7 days, group by category, done items kept 30 days on tiles, log kept 365 days, check-in dot after 7 days.
+- All settings keys are read with fallbacks, not defaulted in `load()`. Defaults: ta-da window 7 days, group by category, done items kept 30 days on tiles, log kept 365 days, check-in dot after 7 days.
 - Category ids in `emptyState()` are plain strings (`fitness`, `tasks`, `notes`); new ones use `uid('c')`.
 - Persisted data from older shapes is migrated inside `load()` (e.g. missing `icon` becomes `null`). Add new migrations there rather than assuming a fresh shape. Consider a `version` field before any backup/export format ships.
 - Fresh install starts with three generic starter categories (Fitness, Tasks, Notes) plus the virtual Inbox, seeded with sample items that double as a tutorial (`emptyState()` in `js/logic.js`).
@@ -99,8 +99,9 @@ Single JSON blob in `localStorage` under key `well-tended-v1`, written by `save(
 
 ## Not yet built (placeholders exist in the UI — don't assume these work)
 1. **Google Drive backup/restore.** Settings sheet has a "Backup and restore" section and a "Copy data as JSON" button, both placeholder/partial. Intended design if picked back up: manual backup/restore triggered from settings (not continuous sync), Google Identity Services token flow scoped to `drive.file` only, single backup file (e.g. `well-tended-backup.json`) via Drive REST v3, file id cached in localStorage, restore via inline two-tap confirmation (the app never uses `confirm()`), decide the JSON format (with `version` + `exportedAt`) before building since that's the hardest thing to change later. The service worker must keep ignoring non-same-origin hosts other than Google Fonts.
-2. **Weekly check-in notification.** Settings toggle/day/time exist and do nothing yet. There's no server, so reliable timed web push needs either Web Push (subscription + a sender) or a downloadable `.ics` reminder — don't promise a notification the UI can't actually fire.
-3. **Device verification.** Nothing has been verified on a real phone yet: install, offline mode, service-worker update path, touch drag-and-drop, safe-area insets with the bottom tab bar/FAB on Android gesture nav.
+2. **Device verification.** Nothing has been verified on a real phone yet: install, offline mode, service-worker update path, touch drag-and-drop, safe-area insets with the bottom tab bar/FAB on Android gesture nav.
+
+Weekly check-in push notifications were considered and deliberately dropped: there's no server, so reliable timed web push would need new infrastructure (a subscription + a sender) this project doesn't have. The settings toggle/day/time were removed; the Check-in tab's in-app dot (after `checkinDotDays` days since the last check-in) is the permanent reminder mechanism.
 
 ## Conventions worth preserving
 - Keep `js/logic.js` free of DOM access so it stays testable from plain Node.
