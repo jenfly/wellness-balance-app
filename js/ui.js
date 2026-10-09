@@ -456,7 +456,7 @@
      One-time setup: see README "Setting up Google Drive backup". Uses the
      drive.file scope, which only ever grants access to the single backup
      file this app creates, never the rest of the user's Drive. */
-  var GOOGLE_CLIENT_ID = 'YOUR_CLIENT_ID.apps.googleusercontent.com';
+  var GOOGLE_CLIENT_ID = '987428503881-rdrpgllfpqnr5gnviqpmrihmmkuqt2o7.apps.googleusercontent.com';
   var DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
   var BACKUP_FILENAME = 'well-tended-backup.json';
   var FILEID_KEY = KEY + ':drive-file-id';
