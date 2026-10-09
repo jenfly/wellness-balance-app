@@ -310,7 +310,7 @@
       '<div class="seg" role="radiogroup" aria-label="Item type">' + typeSeg + '</div>' +
       '<label class="fld"><span>What</span><input id="f-text" type="text" required maxlength="200" value="' + esc(it.text) + '"></label>' +
       '<label class="fld"><span>Details (optional)</span><textarea id="f-desc" rows="2">' + esc(it.desc) + '</textarea></label>' +
-      '<label class="fld" data-for="todo recurring"><span>Due date</span><input id="f-due" type="date" value="' + esc(it.due || '') + '"><small data-for="recurring">Leave blank to start the clock from today.</small></label>' +
+      '<label class="fld" data-for="todo recurring"><span>Due date</span><div class="due-row"><input id="f-due" type="date" value="' + esc(it.due || '') + '"><button type="button" class="btn flat" data-action="due-clear">Clear</button></div><small data-for="recurring">Leave blank to start the clock from today.</small></label>' +
       '<div class="fld" data-for="recurring"><span>Repeats every</span><div class="inline"><input id="f-n" type="number" min="1" max="99" value="' + f.n + '" aria-label="Repeat interval"><select id="f-unit" aria-label="Repeat unit">' + units + '</select></div></div>' +
       '<label class="fld"><span>Category</span><select id="f-cat">' + cats + '</select></label>' +
       '<div class="fld"><span>Tags</span><div class="chips">' + tagChips + '</div><input id="f-newtag" type="text" placeholder="New tag (comma separated)" maxlength="60"></div>' +
@@ -655,6 +655,7 @@
       case 'item-edit': ui.formFor = id; renderOverlay(); var f1 = $('#overlay-root #f-text'); if (f1) f1.focus(); break;
       case 'item-add': ui.formFor = 'new'; renderOverlay(); var f2 = $('#overlay-root #f-text'); if (f2) f2.focus(); break;
       case 'item-delete': takeSnapshot(); state.items = state.items.filter(function (x) { return x.id !== id; }); ui.formFor = null; save(); renderAll(); toast('Deleted', true); break;
+      case 'due-clear': { var dueInput = t.closest('form').querySelector('#f-due'); dueInput.value = ''; dueInput.focus(); break; }
       case 'form-cancel': if (t.closest('.sheet')) ui.sheet = null; else ui.formFor = null; renderAll(); break;
       case 'toggle-reorder': ui.reorder = !ui.reorder; renderOverlay(); break;
       case 'clear-done': {

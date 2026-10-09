@@ -196,6 +196,9 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .fld small{color:var(--muted)}
 .inline{display:flex;gap:8px}
 .inline > *{flex:1}
+.due-row{display:flex;gap:8px;align-items:center}
+.due-row input{flex:1;min-width:0}
+.due-row .btn{flex:none}
 .seg{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--bg);padding:3px;border-radius:12px}
 .seg label{position:relative;min-width:0}
 .seg input{position:absolute;opacity:0;inset:0}
