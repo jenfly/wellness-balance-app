@@ -179,6 +179,7 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .form input[type=text],.form input[type=date],.form input[type=number],.form input[type=time],.form select,.form textarea,#sheet-root input[type=time],#sheet-root select{width:100%;min-width:0;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;font-size:16px}
 .card .form input,.card .form select,.card .form textarea{background:var(--bg)}
 .fld{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted);min-width:0}
+.fld[hidden]{display:none}
 .fld small{color:var(--muted)}
 .inline{display:flex;gap:8px}
 .inline > *{flex:1}
