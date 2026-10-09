@@ -282,6 +282,12 @@
     upcoming: ['Upcoming', 'Every dated item across all categories, with a toggle for recurring items and a switch between date order and category groups.'],
     checkin: ['Weekly check-in', 'A slider per category (neglected, balanced, over-focused) plus the reflective prompts.']
   };
+  function backupBannerHTML() {
+    if (!driveConfigured()) return '';
+    var last = lastBackupAt();
+    if (!last || daysSince(last) <= 30) return '';
+    return '<div class="banner"><p>It&rsquo;s been ' + daysSince(last) + ' days since your last backup.</p><button class="btn flat" data-action="settings">Back up now</button></div>';
+  }
   function renderMain() {
     var y = window.scrollY;
     var d = new Date().toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' });
@@ -291,7 +297,7 @@
     else if (ui.tab === 'tada') body = tadaView();
     else if (ui.tab === 'checkin') body = checkinView();
     else body = '<div class="placeholder"><h2>' + PLACEHOLDERS[ui.tab][0] + '</h2><p>' + PLACEHOLDERS[ui.tab][1] + '</p><p style="margin-top:10px">Next up in the build.</p></div>';
-    $('#main').innerHTML = '<header class="top"><div><h1>Well Tended</h1><p class="date">' + esc(d) + '</p></div><button class="icon-btn" data-action="settings" aria-label="Settings">' + icon('gear') + '</button></header>' + body;
+    $('#main').innerHTML = backupBannerHTML() + '<header class="top"><div><h1>Well Tended</h1><p class="date">' + esc(d) + '</p></div><button class="icon-btn" data-action="settings" aria-label="Settings">' + icon('gear') + '</button></header>' + body;
     window.scrollTo(0, y);
     var tabs = $('#tabbar').children;
     for (var k = 0; k < tabs.length; k++) { if (tabs[k].dataset.tab === ui.tab) tabs[k].setAttribute('aria-current', 'page'); else tabs[k].removeAttribute('aria-current'); }

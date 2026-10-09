@@ -75,6 +75,9 @@ button{cursor:pointer}
 svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
 
 #app{max-width:520px;margin-inline:auto;padding-inline:16px;padding-bottom:calc(170px + env(safe-area-inset-bottom,0px))}
+.banner{margin:calc(env(safe-area-inset-top,0px) + 10px) 0 0;background:var(--apricot-bg);color:var(--apricot-fg);border-radius:12px;padding:10px 12px 10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.banner p{margin:0;font-size:13px;line-height:1.3}
+.banner .btn{flex:none;color:var(--apricot-fg);padding:6px 10px;font-size:13px}
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:var(--bg);display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:14px 10px}
 .top h1{margin:0;font:600 28px/1.1 var(--font-display);letter-spacing:-.01em}
 .top .date{margin:2px 0 0;color:var(--muted);font-size:13px}
