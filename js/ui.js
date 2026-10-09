@@ -72,7 +72,7 @@
   function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* ignore */ } }
 
   var state = load();
-  var ui = { tab: 'tiles', openCat: null, tag: null, editTiles: false, delAsk: null, formFor: null, reorder: false, showDone: false, sheet: null, resetAsk: false, showJson: false, driveBusy: false, driveStatus: null, restoreOffer: null };
+  var ui = { tab: 'tiles', openCat: null, tag: null, editTiles: false, delAsk: null, formFor: null, dateFor: null, reorder: false, showDone: false, sheet: null, resetAsk: false, showJson: false, driveBusy: false, driveStatus: null, restoreOffer: null };
   var snapshot = null, toastTimer = null;
 
   function catOf(id) { return id === 'inbox' ? INBOX : state.cats.find(function (c) { return c.id === id; }); }
@@ -365,8 +365,17 @@
   }
 
   /* ---------- Expanded tile ---------- */
+  function dateRowHTML(i) {
+    var editing = i.done, cur = editing ? ds(new Date(i.doneAt)) : today();
+    return '<li class="row date-edit"><div class="row-content"><div class="de-main"><span class="row-text">' + esc(i.text) + '</span>' +
+      '<span class="de-label">' + (editing ? 'Completed on' : 'Mark done on') + '</span></div>' +
+      '<input type="date" id="de-' + i.id + '" value="' + cur + '" max="' + today() + '" aria-label="' + (editing ? 'Completed on' : 'Mark done on') + '">' +
+      '<button type="button" class="icon-btn" data-action="date-cancel" data-id="' + i.id + '" aria-label="Cancel">' + icon('x') + '</button>' +
+      '<button type="button" class="icon-btn de-save" data-action="date-confirm" data-id="' + i.id + '" aria-label="' + (editing ? 'Save' : 'Mark done') + '">' + icon('check') + '</button></div></li>';
+  }
   function rowHTML(i) {
     if (ui.formFor === i.id) return '<li class="row editing">' + formHTML(i, i.catId) + '</li>';
+    if (ui.dateFor === i.id) return dateRowHTML(i);
     var hasCheck = i.type === 'todo' || i.type === 'recurring';
     var lead = hasCheck
       ? '<button class="chk' + (i.done ? ' on' : '') + '" data-action="item-toggle" data-id="' + i.id + '" aria-label="' + (i.done ? 'Mark not done' : 'Mark done') + ': ' + esc(i.text) + '">' + (i.done ? icon('check') : '') + '</button>'
@@ -379,6 +388,7 @@
     var ctl = '';
     if (!i.done) ctl = '<button class="icon-btn" data-action="item-pin" data-id="' + i.id + '" aria-pressed="' + i.pinned + '" aria-label="' + (i.pinned ? 'Unpin' : 'Pin') + '">' + icon('pin') + '</button>' +
       '<button class="grip" data-grip="item" data-id="' + i.id + '" aria-label="Reorder. Drag, or use the arrow keys.">' + icon('grip') + '</button>';
+    else if (i.type === 'todo' && i.doneAt) ctl = '<button type="button" class="text-btn done-date" data-action="date-edit" data-id="' + i.id + '">' + esc(fmtPast(ds(new Date(i.doneAt)))) + '</button>';
     return '<li class="row' + (i.done ? ' done' : '') + '"' + (i.done ? '' : ' data-sort="item" data-id="' + i.id + '" data-group="' + (i.pinned ? 'p' : 'u') + '"') + '><div class="row-track"><div class="row-content">' + lead + main + '<span class="row-ctl">' + ctl + '</span></div>' +
       '<button class="row-delete" data-action="item-delete" data-id="' + i.id + '" aria-label="Delete: ' + esc(i.text) + '">' + icon('trash') + '</button></div></li>';
   }
@@ -610,8 +620,8 @@
     var a = t.dataset.action, id = t.dataset.id, it;
     switch (a) {
       case 'tab': ui.tab = t.dataset.tab; ui.editTiles = false; ui.delAsk = null; if (ui.tab !== 'checkin') { ui.ciEdit = false; ui.ciDraft = null; } renderMain(); window.scrollTo(0, 0); break;
-      case 'open-cat': ui.openCat = id; ui.formFor = null; ui.reorder = false; ui.showDone = false; renderOverlay(); break;
-      case 'close-overlay': ui.openCat = null; ui.formFor = null; renderAll(); break;
+      case 'open-cat': ui.openCat = id; ui.formFor = null; ui.dateFor = null; ui.reorder = false; ui.showDone = false; renderOverlay(); break;
+      case 'close-overlay': ui.openCat = null; ui.formFor = null; ui.dateFor = null; renderAll(); break;
       case 'filter': ui.tag = t.dataset.tag || null; renderMain(); break;
       case 'toggle-edit': ui.editTiles = !ui.editTiles; ui.delAsk = null; ui.iconPick = null; renderMain(); break;
       case 'cat-move': {
@@ -645,6 +655,27 @@
         if (r) { save(); renderAll(); if (r.kind === 'done') toast('Done. Added to your ta-da list.', true); else if (r.kind === 'reset') toast('Done. Next due ' + fmtDue(r.due) + '.', true); }
         break;
       }
+      case 'date-edit': ui.dateFor = id; renderOverlay(); break;
+      case 'date-cancel': ui.dateFor = null; renderOverlay(); break;
+      case 'date-confirm': {
+        var dIn = $('#overlay-root #de-' + id), dVal = dIn && dIn.value;
+        it = state.items.find(function (x) { return x.id === id; });
+        if (!it || !dVal) break;
+        var ms = Math.min(parseDate(dVal).getTime(), Date.now());
+        takeSnapshot();
+        if (it.done) {
+          var oldAt = it.doneAt;
+          it.doneAt = ms;
+          var log = state.log.find(function (l) { return l.itemId === id && l.at === oldAt; });
+          if (log) log.at = ms;
+          ui.dateFor = null; save(); renderOverlay(); toast('Completion date updated', true);
+        } else {
+          var r2 = completeItem(state, id, ms);
+          ui.dateFor = null;
+          if (r2) { save(); renderAll(); if (r2.kind === 'done') toast('Done. Added to your ta-da list.', true); else if (r2.kind === 'reset') toast('Done. Next due ' + fmtDue(r2.due) + '.', true); }
+        }
+        break;
+      }
       case 'item-pin': it = state.items.find(function (x) { return x.id === id; }); if (it) { it.pinned = !it.pinned; save(); renderAll(); } break;
       case 'item-up': if (moveItem(state, id, -1)) { save(); renderAll(); } break;
       case 'item-down': if (moveItem(state, id, 1)) { save(); renderAll(); } break;
@@ -652,8 +683,8 @@
         it = state.items.find(function (x) { return x.id === id; });
         if (it) { ui.openCat = it.catId; ui.formFor = it.id; ui.reorder = false; ui.showDone = false; renderAll(); var f4 = $('#overlay-root #f-text'); if (f4) f4.focus(); }
         break;
-      case 'item-edit': ui.formFor = id; renderOverlay(); var f1 = $('#overlay-root #f-text'); if (f1) f1.focus(); break;
-      case 'item-add': ui.formFor = 'new'; renderOverlay(); var f2 = $('#overlay-root #f-text'); if (f2) f2.focus(); break;
+      case 'item-edit': ui.formFor = id; ui.dateFor = null; renderOverlay(); var f1 = $('#overlay-root #f-text'); if (f1) f1.focus(); break;
+      case 'item-add': ui.formFor = 'new'; ui.dateFor = null; renderOverlay(); var f2 = $('#overlay-root #f-text'); if (f2) f2.focus(); break;
       case 'item-delete': takeSnapshot(); state.items = state.items.filter(function (x) { return x.id !== id; }); ui.formFor = null; save(); renderAll(); toast('Deleted', true); break;
       case 'due-clear': { var dueInput = t.closest('form').querySelector('#f-due'); dueInput.value = ''; dueInput.focus(); break; }
       case 'form-cancel': if (t.closest('.sheet')) ui.sheet = null; else ui.formFor = null; renderAll(); break;
@@ -897,6 +928,33 @@
   }, true);
   document.addEventListener('pointerup', function (e) { if (swp && e.pointerId === swp.pid) endSwipe(false); }, true);
   document.addEventListener('pointercancel', function (e) { if (swp && e.pointerId === swp.pid) endSwipe(true); }, true);
+
+  /* ---------- Long-press a checkbox to mark done on a past date ----------
+     Opening the date editor replaces the checkbox with new controls before
+     the triggering touch/click finishes, so only the brief synthetic click
+     that follows needs swallowing — not a long window, which would also eat
+     a fast, deliberate tap on the Confirm button that just appeared. */
+  var press = null, suppressToggleClick = false;
+  function clearPress() { if (press) clearTimeout(press.timer); press = null; }
+  document.addEventListener('pointerdown', function (e) {
+    var btn = e.target.closest('#overlay-root [data-action="item-toggle"]');
+    if (!btn || drag || swp) return;
+    var id = btn.dataset.id, it = state.items.find(function (x) { return x.id === id; });
+    if (!it || it.done) return;
+    press = { pid: e.pointerId, sx: e.clientX, sy: e.clientY, timer: setTimeout(function () {
+      press = null;
+      ui.dateFor = id; renderOverlay();
+      suppressToggleClick = true;
+      setTimeout(function () { suppressToggleClick = false; }, 80);
+    }, 500) };
+  });
+  document.addEventListener('pointermove', function (e) {
+    if (!press || e.pointerId !== press.pid) return;
+    if (Math.hypot(e.clientX - press.sx, e.clientY - press.sy) > 10) clearPress();
+  });
+  document.addEventListener('pointerup', function (e) { if (press && e.pointerId === press.pid) clearPress(); });
+  document.addEventListener('pointercancel', function (e) { if (press && e.pointerId === press.pid) clearPress(); });
+  document.addEventListener('click', function (e) { if (suppressToggleClick) { e.stopPropagation(); e.preventDefault(); suppressToggleClick = false; } }, true);
   document.addEventListener('keydown', function (e) {
     var g = e.target.closest && e.target.closest('[data-grip]');
     if (!g) return;

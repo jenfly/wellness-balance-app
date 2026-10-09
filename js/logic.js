@@ -82,7 +82,7 @@ function completeItem(state, id, now) {
     return { kind: 'undone' };
   }
   if (it.type === 'recurring' && it.freq) {
-    it.due = addFreq(today(), it.freq.n, it.freq.unit);
+    it.due = addFreq(ds(new Date(now)), it.freq.n, it.freq.unit);
     state.log.push({ id: uid('l'), itemId: id, text: it.text, catId: it.catId, at: now, rec: true });
     return { kind: 'reset', due: it.due };
   }
