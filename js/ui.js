@@ -308,7 +308,7 @@
     return '<form class="form" data-form="' + (item ? item.id : 'new') + '" autocomplete="off">' +
       '<div class="seg" role="radiogroup" aria-label="Item type">' + typeSeg + '</div>' +
       '<label class="fld"><span>What</span><input id="f-text" type="text" required maxlength="200" value="' + esc(it.text) + '"></label>' +
-      '<label class="fld" data-for="note goal"><span>Details (optional)</span><textarea id="f-desc" rows="2">' + esc(it.desc) + '</textarea></label>' +
+      '<label class="fld"><span>Details (optional)</span><textarea id="f-desc" rows="2">' + esc(it.desc) + '</textarea></label>' +
       '<label class="fld" data-for="todo recurring"><span>Due date</span><input id="f-due" type="date" value="' + esc(it.due || '') + '"><small data-for="recurring">Leave blank to start the clock from today.</small></label>' +
       '<div class="fld" data-for="recurring"><span>Repeats every</span><div class="inline"><input id="f-n" type="number" min="1" max="99" value="' + f.n + '" aria-label="Repeat interval"><select id="f-unit" aria-label="Repeat unit">' + units + '</select></div></div>' +
       '<label class="fld"><span>Category</span><select id="f-cat">' + cats + '</select></label>' +
@@ -340,7 +340,7 @@
       freq = { n: n, unit: g('f-unit').value };
       if (!due) due = addFreq(today(), n, freq.unit);
     }
-    return { type: type, text: text, desc: (type === 'note' || type === 'goal') ? g('f-desc').value.trim() : '', due: due, freq: freq, pinned: g('f-pin').checked, tags: tags, catId: g('f-cat').value };
+    return { type: type, text: text, desc: g('f-desc').value.trim(), due: due, freq: freq, pinned: g('f-pin').checked, tags: tags, catId: g('f-cat').value };
   }
   function saveForm(form) {
     var v = readForm(form);
