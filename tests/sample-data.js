@@ -68,6 +68,7 @@ function seed() {
     tags: ['quick', 'active'],
     log,
     checkin,
+    notes: { html: '', updatedAt: null },
     settings: {}
   };
   })(H.today, H.addDays, H.uid);

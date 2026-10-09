@@ -217,7 +217,7 @@ function emptyState() {
     cats: [
       { id: 'fitness', name: 'Fitness', color: 'teal', icon: 'dumbbell' },
       { id: 'tasks', name: 'Tasks', color: 'apricot', icon: 'bag' },
-      { id: 'notes', name: 'Notes', color: 'lilac', icon: 'book' }
+      { id: 'ideas', name: 'Ideas', color: 'lilac', icon: 'book' }
     ],
     items: [
       it('fitness', 'goal', 'Walk 3 times a week', { desc: 'A goal: plain text with no due date. Good for habits you want to keep in view.' }),
@@ -225,10 +225,11 @@ function emptyState() {
       it('tasks', 'todo', 'Try checking this off'),
       it('tasks', 'todo', 'Book an appointment', { due: addDays(t, 5), desc: 'A to-do with a due date. Items due soonest show first on the tile.' }),
       it('tasks', 'recurring', 'Water the plants', { due: addDays(t, 1), freq: { n: 1, unit: 'week' } }),
-      it('notes', 'note', 'Tap the pencil on the Home tab to rename, recolor or reorder these tiles', { pinned: true, desc: 'Pinned items always show first. Tap the + button to add your own items.' })
+      it('ideas', 'note', 'Tap the pencil on the Home tab to rename, recolor or reorder these tiles', { pinned: true, desc: 'Pinned items always show first. Tap the + button to add your own items.' })
     ],
     tags: [], log: [],
     checkin: { ratings: {}, at: null, notes: '' },
+    notes: { html: '', updatedAt: null },
     settings: {}
   };
 }

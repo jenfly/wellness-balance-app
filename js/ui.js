@@ -20,7 +20,10 @@
     cal: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
     sliders: '<path d="M6 4v16M12 4v16M18 4v16"/><circle cx="6" cy="9" r="2.2"/><circle cx="12" cy="15" r="2.2"/><circle cx="18" cy="8" r="2.2"/>',
     gear: '<circle cx="12" cy="12" r="3"/><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>',
-    trash: '<path d="M4 7h16M9 7V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V7M6 7l1 13a2 2 0 0 0 2 1.8h6a2 2 0 0 0 2-1.8l1-13M10 11v6M14 11v6"/>'
+    trash: '<path d="M4 7h16M9 7V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V7M6 7l1 13a2 2 0 0 0 2 1.8h6a2 2 0 0 0 2-1.8l1-13M10 11v6M14 11v6"/>',
+    list: '<g fill="currentColor" stroke="none"><circle cx="4" cy="6" r="1.5"/><circle cx="4" cy="12" r="1.5"/><circle cx="4" cy="18" r="1.5"/></g><path d="M9 6h11M9 12h11M9 18h11"/>',
+    indent: '<path d="M10 6h11M10 12h11M10 18h11M3 9l4 3-4 3"/>',
+    outdent: '<path d="M10 6h11M10 12h11M10 18h11M7 9l-4 3 4 3"/>'
   };
   var CAT_ICONS = {
     dumbbell: '<path d="M6.5 6.5v11M17.5 6.5v11M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/>',
@@ -55,6 +58,7 @@
   function normalize(s) {
     s.version = 1;
     s.tags = s.tags || []; s.checkin = Object.assign({ ratings: {}, at: null, notes: '' }, s.checkin || {}); s.log = s.log || []; s.settings = s.settings || {};
+    s.notes = (s.notes && typeof s.notes.html === 'string') ? s.notes : { html: '', updatedAt: null };
     delete s.settings.notify; delete s.settings.day; delete s.settings.time;
     s.cats.forEach(function (c) { if (c.icon === undefined) c.icon = null; });
     return s;
@@ -103,6 +107,15 @@
     else inner = '<p class="empty">' + (ui.tag ? 'Nothing with this tag' : all.length ? 'Nothing due soon' : 'Tap to add something') + '</p>';
     return '<div class="tile sw-' + c.color + (wide ? ' wide' : '') + '"' + (c.id !== 'inbox' ? ' data-sort="tile"' : '') + ' role="button" tabindex="0" data-action="open-cat" data-id="' + c.id + '" aria-label="Open ' + esc(c.name) + '"><h2>' + catIcon(c) + '<span>' + esc(c.name) + '</span></h2>' + inner + '</div>';
   }
+  function notesSectionHTML() {
+    return '<div class="card notes-card"><div class="notes-head"><h2>Notes</h2><div class="notes-toolbar">' +
+      '<button type="button" class="text-btn" data-action="note-bold" aria-label="Bold"><b>B</b></button>' +
+      '<button type="button" class="text-btn" data-action="note-italic" aria-label="Italic"><i>I</i></button>' +
+      '<button type="button" class="text-btn" data-action="note-list" aria-label="Bullet list">' + icon('list') + '</button>' +
+      '<button type="button" class="text-btn" data-action="note-outdent" aria-label="Decrease indent">' + icon('outdent') + '</button>' +
+      '<button type="button" class="text-btn" data-action="note-indent" aria-label="Increase indent">' + icon('indent') + '</button>' +
+      '</div></div><div id="notes-editor" class="notes-editor" contenteditable="true" data-placeholder="Jot something down…">' + state.notes.html + '</div></div>';
+  }
   function iconGrid(c) {
     return '<div class="icon-grid" role="group" aria-label="Icons"><button class="ig' + (!c.icon ? ' on' : '') + '" data-action="cat-icon" data-id="' + c.id + '" data-icon="" aria-pressed="' + !c.icon + '" aria-label="No icon">' + icon('x') + '</button>' +
       PICK_ICONS.map(function (k) { return '<button class="ig' + (c.icon === k ? ' on' : '') + '" data-action="cat-icon" data-id="' + c.id + '" data-icon="' + k + '" aria-pressed="' + (c.icon === k) + '" aria-label="' + k + '">' + icon(k) + '</button>'; }).join('') + '</div>';
@@ -131,7 +144,8 @@
     if (ui.editTiles) tiles += '<button class="tile add-tile" data-action="cat-add">' + icon('plus') + ' Add category</button>';
     tiles += tile(INBOX, true);
     return '<div class="toolbar">' + (chips || '<span></span>') + '<button class="text-btn" data-action="toggle-edit">' + (ui.editTiles ? 'Done' : 'Edit tiles') + '</button></div>' +
-      '<div class="grid">' + tiles + '</div>' + (ui.editTiles ? '<p class="note">Drag the handle to reorder. Rename, recolor or delete here. The Inbox always stays last.</p>' : '');
+      '<div class="grid">' + tiles + '</div>' + (ui.editTiles ? '<p class="note">Drag the handle to reorder. Rename, recolor or delete here. The Inbox always stays last.</p>' : '') +
+      notesSectionHTML();
   }
   /* ---------- Upcoming view ---------- */
   function upRow(i, mode, bucketKey) {
@@ -639,6 +653,11 @@
       case 'close-overlay': ui.openCat = null; ui.formFor = null; ui.dateFor = null; renderAll(); break;
       case 'filter': ui.tag = t.dataset.tag || null; renderMain(); break;
       case 'toggle-edit': ui.editTiles = !ui.editTiles; ui.delAsk = null; ui.iconPick = null; renderMain(); break;
+      case 'note-bold': document.execCommand('bold'); syncNotes(); break;
+      case 'note-italic': document.execCommand('italic'); syncNotes(); break;
+      case 'note-list': document.execCommand('insertUnorderedList'); syncNotes(); break;
+      case 'note-indent': document.execCommand('indent'); syncNotes(); break;
+      case 'note-outdent': document.execCommand('outdent'); syncNotes(); break;
       case 'cat-move': {
         var i = state.cats.findIndex(function (c) { return c.id === id; }), j = i + Number(t.dataset.dir);
         if (i >= 0 && j >= 0 && j < state.cats.length) { var tmp = state.cats[i]; state.cats[i] = state.cats[j]; state.cats[j] = tmp; save(); renderMain(); }
@@ -1002,10 +1021,21 @@
     t.setAttribute('aria-valuetext', ratingLabel(v));
     var sm = $('#ci-summary'); if (sm) sm.innerHTML = ciSummaryInner();
   }
-  document.addEventListener('input', function (e) { if (e.target.dataset && e.target.dataset.ci) setRating(e.target); });
+  function syncNotes() { var n = $('#notes-editor'); if (n) { state.notes.html = n.innerHTML; state.notes.updatedAt = Date.now(); save(); } }
+  document.addEventListener('input', function (e) {
+    if (e.target.dataset && e.target.dataset.ci) setRating(e.target);
+    else if (e.target.id === 'notes-editor') syncNotes();
+  });
   document.addEventListener('click', function (e) {
     var t = e.target;
     if (t.dataset && t.dataset.ci && t.closest('.ci-row').classList.contains('unset')) { setRating(t); save(); } // a tap without moving counts as "balanced"
+  });
+  document.addEventListener('mousedown', function (e) { if (e.target.closest('[data-action^="note-"]')) e.preventDefault(); });
+  document.addEventListener('paste', function (e) {
+    if (e.target.closest && e.target.closest('#notes-editor')) {
+      e.preventDefault();
+      document.execCommand('insertText', false, (e.clipboardData || window.clipboardData).getData('text/plain'));
+    }
   });
 
   var tabs = [['tiles', 'Home', 'grid'], ['upcoming', 'Upcoming', 'cal'], ['tada', 'Ta-da', 'tada'], ['checkin', 'Check-in', 'sliders']];
