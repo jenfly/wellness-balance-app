@@ -200,7 +200,7 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .date-edit input[type=date]{flex:1 1 150px;min-width:0;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:8px 10px;font-size:15px}
 .date-edit .de-save{background:var(--accent);color:var(--accent-ink)}
 .card{background:var(--surface);border-radius:12px;padding:14px;margin-bottom:12px}
-.notes-card{display:flex;flex-direction:column;gap:8px}
+.notes-card{display:flex;flex-direction:column;gap:8px;margin-top:12px}
 .notes-head{display:flex;align-items:center;justify-content:space-between}
 .notes-head h2{margin:0;font:600 17px var(--font-display);color:var(--ink)}
 .notes-toolbar{display:flex;gap:2px;align-items:center}
