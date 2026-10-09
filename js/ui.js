@@ -19,7 +19,8 @@
     tada: '<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16 9.5"/>',
     cal: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
     sliders: '<path d="M6 4v16M12 4v16M18 4v16"/><circle cx="6" cy="9" r="2.2"/><circle cx="12" cy="15" r="2.2"/><circle cx="18" cy="8" r="2.2"/>',
-    gear: '<circle cx="12" cy="12" r="3"/><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>'
+    gear: '<circle cx="12" cy="12" r="3"/><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>',
+    trash: '<path d="M4 7h16M9 7V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V7M6 7l1 13a2 2 0 0 0 2 1.8h6a2 2 0 0 0 2-1.8l1-13M10 11v6M14 11v6"/>'
   };
   var CAT_ICONS = {
     dumbbell: '<path d="M6.5 6.5v11M17.5 6.5v11M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/>',
@@ -378,10 +379,12 @@
     var ctl = '';
     if (!i.done) ctl = '<button class="icon-btn" data-action="item-pin" data-id="' + i.id + '" aria-pressed="' + i.pinned + '" aria-label="' + (i.pinned ? 'Unpin' : 'Pin') + '">' + icon('pin') + '</button>' +
       '<button class="grip" data-grip="item" data-id="' + i.id + '" aria-label="Reorder. Drag, or use the arrow keys.">' + icon('grip') + '</button>';
-    return '<li class="row' + (i.done ? ' done' : '') + '"' + (i.done ? '' : ' data-sort="item" data-id="' + i.id + '" data-group="' + (i.pinned ? 'p' : 'u') + '"') + '>' + lead + main + '<span class="row-ctl">' + ctl + '</span></li>';
+    return '<li class="row' + (i.done ? ' done' : '') + '"' + (i.done ? '' : ' data-sort="item" data-id="' + i.id + '" data-group="' + (i.pinned ? 'p' : 'u') + '"') + '><div class="row-track"><div class="row-content">' + lead + main + '<span class="row-ctl">' + ctl + '</span></div>' +
+      '<button class="row-delete" data-action="item-delete" data-id="' + i.id + '" aria-label="Delete: ' + esc(i.text) + '">' + icon('trash') + '</button></div></li>';
   }
   function renderOverlay() {
     var root = $('#overlay-root');
+    swipeOpen = null; swp = null;
     if (!ui.openCat) { root.innerHTML = ''; document.body.classList.remove('lock'); return; }
     var c = catOf(ui.openCat);
     if (!c) { ui.openCat = null; renderOverlay(); return; }
@@ -836,9 +839,63 @@
   });
   document.addEventListener('pointerup', function (e) { if (drag && e.pointerId === drag.pid) endDrag(false); });
   document.addEventListener('pointercancel', function (e) { if (drag && e.pointerId === drag.pid) endDrag(true); });
-  document.addEventListener('touchmove', function (e) { if (drag && drag.active && e.cancelable) e.preventDefault(); }, { passive: false });
+  document.addEventListener('touchmove', function (e) { if (((drag && drag.active) || (swp && swp.committed)) && e.cancelable) e.preventDefault(); }, { passive: false });
   document.addEventListener('contextmenu', function (e) { if (drag) e.preventDefault(); });
   document.addEventListener('click', function (e) { if (justDragged) { e.stopPropagation(); e.preventDefault(); } }, true);
+
+  /* ---------- Swipe to delete (expanded tile view) ----------
+     A horizontal drag on a row slides it left to reveal a delete button; vertical
+     movement is left alone so it falls through to scrolling or the item's own
+     long-press reorder drag above. Runs in the capture phase so it can cancel a
+     pending reorder before that listener sees the same pointermove. */
+  var SWIPE_W = 72, swipeOpen = null, swp = null;
+  function swipeHit(target) {
+    if (!ui.openCat || ui.formFor || !target.closest) return null;
+    if (target.closest('input,select,textarea,[data-grip],[data-action="item-toggle"]')) return null;
+    var row = target.closest('li.row');
+    if (!row) return null;
+    var track = row.querySelector('.row-track');
+    return track ? { row: row, track: track } : null;
+  }
+  function closeSwipeOpen(suppressClick) {
+    if (!swipeOpen) return;
+    swipeOpen.classList.remove('swipe-open');
+    swipeOpen = null;
+    if (suppressClick) { justDragged = true; setTimeout(function () { justDragged = false; }, 300); }
+  }
+  function endSwipe(cancel) {
+    if (!swp) return;
+    var row = swp.row, track = swp.track, committed = swp.committed, tx = swp.tx;
+    swp = null;
+    if (!committed) return;
+    row.classList.remove('swiping');
+    track.style.transform = '';
+    if (!cancel && tx < -SWIPE_W / 2) { row.classList.add('swipe-open'); swipeOpen = row; }
+    else { row.classList.remove('swipe-open'); if (swipeOpen === row) swipeOpen = null; }
+    justDragged = true; setTimeout(function () { justDragged = false; }, 300);
+  }
+  document.addEventListener('pointerdown', function (e) {
+    var hit = swipeHit(e.target);
+    if (swipeOpen && (!hit || hit.row !== swipeOpen)) closeSwipeOpen(true);
+    if (!hit || swp) return;
+    swp = { row: hit.row, track: hit.track, pid: e.pointerId, sx: e.clientX, sy: e.clientY, startTx: hit.row.classList.contains('swipe-open') ? -SWIPE_W : 0, committed: false, tx: 0 };
+  }, true);
+  document.addEventListener('pointermove', function (e) {
+    if (!swp || e.pointerId !== swp.pid) return;
+    var dx = e.clientX - swp.sx, dy = e.clientY - swp.sy;
+    if (!swp.committed) {
+      if (Math.hypot(dx, dy) < 6) return;
+      if (Math.abs(dy) >= Math.abs(dx)) { swp = null; return; } // vertical/ambiguous: leave it to scroll or reorder
+      swp.committed = true;
+      if (drag && drag.pid === e.pointerId) { clearTimeout(drag.timer); drag = null; }
+      swp.row.classList.add('swiping');
+    }
+    e.preventDefault();
+    swp.tx = Math.min(0, Math.max(-SWIPE_W - 20, swp.startTx + dx));
+    swp.track.style.transform = 'translateX(' + swp.tx + 'px)';
+  }, true);
+  document.addEventListener('pointerup', function (e) { if (swp && e.pointerId === swp.pid) endSwipe(false); }, true);
+  document.addEventListener('pointercancel', function (e) { if (swp && e.pointerId === swp.pid) endSwipe(true); }, true);
   document.addEventListener('keydown', function (e) {
     var g = e.target.closest && e.target.closest('[data-grip]');
     if (!g) return;
