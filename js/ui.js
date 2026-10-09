@@ -50,16 +50,18 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function $(s) { return document.querySelector(s); }
 
+  function normalize(s) {
+    s.version = 1;
+    s.tags = s.tags || []; s.checkin = Object.assign({ ratings: {}, at: null, notes: '' }, s.checkin || {}); s.log = s.log || []; s.settings = Object.assign({ day: 'Sunday', time: '18:00', notify: false }, s.settings || {});
+    s.cats.forEach(function (c) { if (c.icon === undefined) c.icon = null; });
+    return s;
+  }
   function load() {
     try {
       var r = localStorage.getItem(KEY);
       if (r) {
         var s = JSON.parse(r);
-        if (s && Array.isArray(s.cats) && Array.isArray(s.items)) {
-          s.tags = s.tags || []; s.checkin = Object.assign({ ratings: {}, at: null, notes: '' }, s.checkin || {}); s.log = s.log || []; s.settings = Object.assign({ day: 'Sunday', time: '18:00', notify: false }, s.settings || {});
-          s.cats.forEach(function (c) { if (c.icon === undefined) c.icon = null; });
-          return s;
-        }
+        if (s && Array.isArray(s.cats) && Array.isArray(s.items)) return normalize(s);
       }
     } catch (e) { /* storage unavailable */ }
     return emptyState();
@@ -67,7 +69,7 @@
   function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* ignore */ } }
 
   var state = load();
-  var ui = { tab: 'tiles', openCat: null, tag: null, editTiles: false, delAsk: null, formFor: null, reorder: false, showDone: false, sheet: null, resetAsk: false, showJson: false };
+  var ui = { tab: 'tiles', openCat: null, tag: null, editTiles: false, delAsk: null, formFor: null, reorder: false, showDone: false, sheet: null, resetAsk: false, showJson: false, driveBusy: false, driveStatus: null, restoreOffer: null };
   var snapshot = null, toastTimer = null;
 
   function catOf(id) { return id === 'inbox' ? INBOX : state.cats.find(function (c) { return c.id === id; }); }
@@ -402,10 +404,26 @@
   }
 
   /* ---------- Sheets ---------- */
+  function backupSectionHTML() {
+    if (!driveConfigured()) {
+      return '<section><h4>Backup and restore</h4><p class="hint">Back up to Google Drive and restore from it. Needs a one-time setup first &mdash; see README &ldquo;Setting up Google Drive backup&rdquo;.</p></section>';
+    }
+    if (ui.restoreOffer) {
+      var r = ui.restoreOffer, when = new Date(r.exportedAt).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' });
+      var catN = r.state.cats.length, itemN = r.state.items.length;
+      var counts = catN + (catN === 1 ? ' category' : ' categories') + ', ' + itemN + (itemN === 1 ? ' item' : ' items');
+      return '<section><h4>Backup and restore</h4><p class="hint">Backup from ' + esc(when) + ' &mdash; ' + counts + '. Restoring replaces everything currently on this device.</p>' +
+        '<div class="form-actions"><button class="btn primary" data-action="restore-confirm">Restore</button><button class="btn" data-action="restore-cancel">Cancel</button></div></section>';
+    }
+    var last = lastBackupAt(), status = last ? 'Last backed up ' + agoText(last) + '.' : 'Never backed up.';
+    return '<section><h4>Backup and restore</h4><p class="hint">' + esc(status) + '</p>' +
+      '<div class="form-actions"><button class="btn" data-action="backup-drive"' + (ui.driveBusy ? ' disabled' : '') + '>Back up to Drive</button><button class="btn" data-action="restore-drive"' + (ui.driveBusy ? ' disabled' : '') + '>Restore</button></div>' +
+      (ui.driveStatus ? '<p class="hint">' + esc(ui.driveStatus) + '</p>' : '') + '</section>';
+  }
   function settingsHTML() {
     var on = !!state.settings.notify, dis = on ? '' : ' disabled';
     var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(function (d) { return '<option' + (d === state.settings.day ? ' selected' : '') + '>' + d + '</option>'; }).join('');
-    return '<section><h4>Backup and restore</h4><p class="hint">Back up to Google Drive and restore from it. This arrives when the app moves to the real PWA.</p><div class="form-actions"><button class="btn" disabled>Back up to Drive</button><button class="btn" disabled>Restore</button></div></section>' +
+    return backupSectionHTML() +
       '<section><h4>Weekly check-in reminder</h4><label class="switch-row"><span>Remind me each week</span><span class="switch"><input type="checkbox" id="s-notify" role="switch"' + (on ? ' checked' : '') + '><span class="track"></span></span></label>' +
       '<div class="inline"><select id="s-day" aria-label="Reminder day"' + dis + '>' + days + '</select><input id="s-time" type="time" value="' + esc(state.settings.time) + '" aria-label="Reminder time"' + dis + '></div><p class="hint">' + (on ? 'Saved here for the prototype. Real push notifications come with the PWA.' : 'Reminders are off. Turn them on to choose a day and time.') + '</p>' +
       '<label class="fld"><span>Show a dot on the Check-in tab after</span><select id="s-dotdays">' + selOpts([[7, '7 days'], [10, '10 days'], [14, '14 days'], [21, '21 days'], [30, '30 days']], keepDays('checkinDotDays', 7)) + '</select></label></section>' +
@@ -427,13 +445,161 @@
   function renderAll() { renderMain(); renderOverlay(); renderSheet(); }
 
   /* ---------- Toast and undo ---------- */
-  function takeSnapshot() { snapshot = JSON.stringify({ cats: state.cats, items: state.items, tags: state.tags, log: state.log }); }
+  function takeSnapshot() { snapshot = JSON.stringify({ cats: state.cats, items: state.items, tags: state.tags, log: state.log, checkin: state.checkin, settings: state.settings }); }
   function toast(msg, withUndo) {
     var el = $('#toast');
     el.innerHTML = '<span>' + esc(msg) + '</span>' + (withUndo ? '<button data-action="undo">Undo</button>' : '');
     el.hidden = false;
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { el.hidden = true; }, 5000);
+  }
+
+  /* ---------- Google Drive backup ----------
+     One-time setup: see README "Setting up Google Drive backup". Uses the
+     drive.file scope, which only ever grants access to the single backup
+     file this app creates, never the rest of the user's Drive. */
+  var GOOGLE_CLIENT_ID = 'YOUR_CLIENT_ID.apps.googleusercontent.com';
+  var DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+  var BACKUP_FILENAME = 'well-tended-backup.json';
+  var FILEID_KEY = KEY + ':drive-file-id';
+  var LASTBACKUP_KEY = KEY + ':last-backup';
+
+  var gisReady = false, tokenClient = null, cachedToken = null, cachedTokenExpiresAt = 0;
+
+  function driveConfigured() { return GOOGLE_CLIENT_ID.indexOf('YOUR_CLIENT_ID') !== 0; }
+  function lastBackupAt() { try { var v = localStorage.getItem(LASTBACKUP_KEY); return v ? Number(v) : null; } catch (e) { return null; } }
+  function setLastBackupAt(ms) { try { localStorage.setItem(LASTBACKUP_KEY, String(ms)); } catch (e) { /* ignore */ } }
+  function driveFileId() { try { return localStorage.getItem(FILEID_KEY); } catch (e) { return null; } }
+  function setDriveFileId(id) { try { localStorage.setItem(FILEID_KEY, id); } catch (e) { /* ignore */ } }
+  function agoText(ms) { var d = daysSince(ms); return d === 0 ? 'today' : d === 1 ? 'yesterday' : d + ' days ago'; }
+
+  function loadGis() {
+    return new Promise(function (resolve, reject) {
+      if (gisReady && window.google && window.google.accounts) { resolve(); return; }
+      var s = document.createElement('script');
+      s.src = 'https://accounts.google.com/gsi/client';
+      s.async = true;
+      s.onload = function () { gisReady = true; resolve(); };
+      s.onerror = function () { reject(new Error('gis-load-failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  // Reuses the in-memory token while valid, then tries a silent (prompt-less)
+  // renewal before falling back to the full consent screen.
+  function getAccessToken(forceConsent) {
+    return new Promise(function (resolve, reject) {
+      if (!forceConsent && cachedToken && Date.now() < cachedTokenExpiresAt) { resolve(cachedToken); return; }
+      if (!tokenClient) {
+        tokenClient = google.accounts.oauth2.initTokenClient({ client_id: GOOGLE_CLIENT_ID, scope: DRIVE_SCOPE, callback: function () {} });
+      }
+      tokenClient.callback = function (resp) {
+        if (resp.error) {
+          if (!forceConsent) { getAccessToken(true).then(resolve, reject); } else { reject(resp); }
+          return;
+        }
+        cachedToken = resp.access_token;
+        cachedTokenExpiresAt = Date.now() + (Number(resp.expires_in) || 3600) * 1000 - 60000;
+        resolve(resp.access_token);
+      };
+      tokenClient.requestAccessToken({ prompt: forceConsent ? 'consent' : '' });
+    });
+  }
+
+  function findBackupFileId(token) {
+    var q = encodeURIComponent("name='" + BACKUP_FILENAME + "' and trashed=false");
+    return fetch('https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id,name)', { headers: { Authorization: 'Bearer ' + token } })
+      .then(function (res) { if (!res.ok) throw new Error('find-failed'); return res.json(); })
+      .then(function (data) {
+        var id = (data.files && data.files[0]) ? data.files[0].id : null;
+        if (id) setDriveFileId(id);
+        return id;
+      });
+  }
+
+  function downloadBackup(token, fileId) {
+    return fetch('https://www.googleapis.com/drive/v3/files/' + fileId + '?alt=media', { headers: { Authorization: 'Bearer ' + token } })
+      .then(function (res) { if (!res.ok) throw new Error('download-failed'); return res.text(); });
+  }
+
+  function uploadBackup(token, jsonContent) {
+    function withId(fileId) {
+      if (fileId) {
+        return fetch('https://www.googleapis.com/upload/drive/v3/files/' + fileId + '?uploadType=media', {
+          method: 'PATCH', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: jsonContent
+        }).then(function (res) { if (!res.ok) throw new Error('upload-failed'); setDriveFileId(fileId); });
+      }
+      var boundary = 'welltendedbackup';
+      var metadata = { name: BACKUP_FILENAME, mimeType: 'application/json' };
+      var body = '--' + boundary + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(metadata) + '\r\n' +
+        '--' + boundary + '\r\nContent-Type: application/json\r\n\r\n' + jsonContent + '\r\n--' + boundary + '--';
+      return fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+        method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'multipart/related; boundary=' + boundary }, body: body
+      }).then(function (res) { if (!res.ok) throw new Error('upload-failed'); return res.json(); })
+        .then(function (data) { if (data && data.id) setDriveFileId(data.id); });
+    }
+    var cached = driveFileId();
+    return cached ? withId(cached) : findBackupFileId(token).then(withId);
+  }
+
+  function doBackup() {
+    if (!driveConfigured()) { toast('Backup not set up yet — see README "Setting up Google Drive backup".', false); return; }
+    ui.driveBusy = true; ui.driveStatus = 'Connecting to Google…'; renderSheet();
+    loadGis()
+      .then(function () { return getAccessToken(); })
+      .then(function (token) {
+        ui.driveStatus = 'Backing up…'; renderSheet();
+        var content = JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), state: state });
+        return uploadBackup(token, content);
+      })
+      .then(function () {
+        setLastBackupAt(Date.now());
+        ui.driveBusy = false; ui.driveStatus = null; renderSheet();
+        toast('Backed up to Google Drive.', false);
+      })
+      .catch(function () {
+        ui.driveBusy = false; ui.driveStatus = null; renderSheet();
+        toast('Backup to Google Drive failed — try again.', false);
+      });
+  }
+
+  // Downloads and validates the backup first, then offers it for confirmation
+  // in the sheet rather than asking the user to commit to a restore blind.
+  function doRestoreCheck() {
+    if (!driveConfigured()) { toast('Backup not set up yet — see README "Setting up Google Drive backup".', false); return; }
+    ui.driveBusy = true; ui.driveStatus = 'Connecting to Google…'; renderSheet();
+    loadGis()
+      .then(function () { return getAccessToken(); })
+      .then(function (token) {
+        ui.driveStatus = 'Looking for a backup…'; renderSheet();
+        return findBackupFileId(token).then(function (fileId) {
+          if (!fileId) throw new Error('no-backup');
+          return downloadBackup(token, fileId);
+        });
+      })
+      .then(function (content) {
+        var data = JSON.parse(content);
+        if (!data || data.version !== 1 || !data.state || !Array.isArray(data.state.cats) || !Array.isArray(data.state.items)) {
+          throw new Error('invalid-backup');
+        }
+        ui.driveBusy = false; ui.driveStatus = null; ui.restoreOffer = data; renderSheet();
+      })
+      .catch(function (err) {
+        ui.driveBusy = false; ui.driveStatus = null; renderSheet();
+        var msg = err && err.message === 'no-backup' ? 'No backup found on Google Drive.'
+          : err && err.message === 'invalid-backup' ? 'That backup file could not be read.'
+          : 'Restore from Google Drive failed — try again.';
+        toast(msg, false);
+      });
+  }
+
+  function doRestoreConfirm() {
+    if (!ui.restoreOffer) return;
+    takeSnapshot();
+    state = normalize(ui.restoreOffer.state);
+    ui.restoreOffer = null; ui.sheet = null; ui.openCat = null; ui.tag = null;
+    save(); renderAll();
+    toast('Restored from Google Drive.', true);
   }
 
   /* ---------- Events ---------- */
@@ -502,10 +668,10 @@
       case 'ci-finish': state.checkin.at = Date.now(); ui.ciEdit = false; ui.ciDraft = null; save(); renderMain(); toast('Check-in saved', false); break;
       case 'toggle-done': ui.showDone = !ui.showDone; renderOverlay(); break;
       case 'fab': ui.formFor = null; ui.sheet = { kind: 'add', catId: ui.openCat || 'inbox' }; renderAll(); var f3 = $('#sheet-root #f-text'); if (f3) f3.focus(); break;
-      case 'settings': ui.sheet = { kind: 'settings' }; ui.resetAsk = false; ui.showJson = false; renderSheet(); break;
-      case 'close-sheet': ui.sheet = null; renderSheet(); break;
+      case 'settings': ui.sheet = { kind: 'settings' }; ui.resetAsk = false; ui.showJson = false; ui.restoreOffer = null; ui.driveStatus = null; renderSheet(); break;
+      case 'close-sheet': ui.sheet = null; ui.restoreOffer = null; ui.driveStatus = null; renderSheet(); break;
       case 'undo':
-        if (snapshot) { var s = JSON.parse(snapshot); state.cats = s.cats; state.items = s.items; state.tags = s.tags; state.log = s.log; snapshot = null; save(); renderAll(); }
+        if (snapshot) { var s = JSON.parse(snapshot); state.cats = s.cats; state.items = s.items; state.tags = s.tags; state.log = s.log; state.checkin = s.checkin; state.settings = s.settings; snapshot = null; save(); renderAll(); }
         $('#toast').hidden = true; break;
       case 'reset-data':
         if (!ui.resetAsk) { ui.resetAsk = true; renderSheet(); }
@@ -514,6 +680,10 @@
       case 'copy-json':
         (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(JSON.stringify(state, null, 2)) : Promise.reject()).then(function () { toast('Copied', false); }).catch(function () { ui.showJson = true; renderSheet(); });
         break;
+      case 'backup-drive': doBackup(); break;
+      case 'restore-drive': doRestoreCheck(); break;
+      case 'restore-confirm': doRestoreConfirm(); break;
+      case 'restore-cancel': ui.restoreOffer = null; renderSheet(); break;
     }
   });
   document.addEventListener('keydown', function (e) {

@@ -213,6 +213,7 @@ function emptyState() {
     done: false, doneAt: null, manual: false, tags: [], order: n++
   }, o || {});
   return {
+    version: 1,
     cats: [
       { id: 'fitness', name: 'Fitness', color: 'teal', icon: 'dumbbell' },
       { id: 'tasks', name: 'Tasks', color: 'apricot', icon: 'bag' },
