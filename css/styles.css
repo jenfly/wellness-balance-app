@@ -114,7 +114,7 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .dot{width:7px;height:7px;border-radius:50%;display:inline-block}
 .more,.empty{margin:0;font-size:12.5px;opacity:.75}
 .tile .more{margin-top:auto}
-.tile.edit{cursor:default;gap:10px}
+.tile.edit{cursor:default;gap:10px;grid-column:1/-1;min-height:0}
 .name-input{width:100%;min-width:0;border:1px solid var(--t-dot);background:var(--chip);border-radius:10px;padding:8px 10px;font:600 16px var(--font-display);color:var(--t-fg)}
 .swatches{display:flex;flex-wrap:wrap;gap:8px}
 .swatch{width:22px;height:22px;border-radius:50%;border:2px solid transparent;background:var(--t-dot);padding:0}
