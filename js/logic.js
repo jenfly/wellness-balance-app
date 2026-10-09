@@ -200,7 +200,7 @@ function ratingGroups(state) {
   state.cats.forEach((c) => {
     const v = r[c.id];
     if (v == null) return;
-    if (v <= 40) low.push(c); else if (v >= 61) high.push(c);
+    if (v <= 25) low.push(c); else if (v >= 76) high.push(c);
   });
   return { low, high };
 }

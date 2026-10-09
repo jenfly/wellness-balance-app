@@ -70,5 +70,5 @@ c1.checkin.at=null;assert(L.checkinDue(c1,30));
 c1.checkin.at=Date.now();assert.strictEqual(L.daysSince(c1.checkin.at),0);assert(!L.checkinDue(c1,7));
 assert.deepStrictEqual([0,25,26,40,41,60,61,75,76,100].map(L.ratingLabel),['Neglected','Neglected','Leaning low','Leaning low','Balanced','Balanced','Leaning high','Leaning high','Over-focused','Over-focused']);
 assert.strictEqual(L.ratingLabel(undefined),'Not set');
-const gg=L.ratingGroups(L.seed());assert.deepStrictEqual(gg.low.map(c=>c.id),['fitness','housework','garden','calm','hobbies']);assert.deepStrictEqual(gg.high.map(c=>c.id),['cooking','career']);
+const gg=L.ratingGroups(L.seed());assert.deepStrictEqual(gg.low.map(c=>c.id),['fitness']);assert.deepStrictEqual(gg.high.map(c=>c.id),['career']);
 console.log('checkin ok');
