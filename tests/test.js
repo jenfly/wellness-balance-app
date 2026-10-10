@@ -76,3 +76,20 @@ assert.deepStrictEqual([0,25,26,40,41,60,61,75,76,100].map(L.ratingLabel),['Negl
 assert.strictEqual(L.ratingLabel(undefined),'Not set');
 const gg=L.ratingGroups(L.seed());assert.deepStrictEqual(gg.low.map(c=>c.id),['fitness']);assert.deepStrictEqual(gg.high.map(c=>c.id),['career']);
 console.log('checkin ok');
+// check-in history
+const h1=L.seed();
+const beforeLen=h1.checkinHistory.length, savedRatings=Object.assign({},h1.checkin.ratings);
+h1.checkin.notes='felt good this week';
+const entry1=L.saveCheckin(h1,Date.now());
+assert.strictEqual(entry1.id[0],'h');
+assert.deepStrictEqual(entry1.ratings,savedRatings);
+assert.strictEqual(entry1.notes,'felt good this week');
+assert.strictEqual(h1.checkin.notes,'felt good this week'); // not cleared
+assert.deepStrictEqual(h1.checkin.ratings,savedRatings); // not cleared
+assert.strictEqual(h1.checkinHistory.length,beforeLen+1);
+const now2=Date.now();
+const hist=[{id:'h1',at:now2-10*86400000,ratings:{},notes:''},{id:'h2',at:now2-5*86400000,ratings:{},notes:''},{id:'h3',at:now2-30*86400000,ratings:{},notes:''}];
+assert.deepStrictEqual(L.checkinHistoryInRange(hist,10,now2).map(e=>e.id),['h1','h2']);
+assert.deepStrictEqual(L.checkinHistoryInRange(hist,9,now2).map(e=>e.id),['h2']);
+assert.deepStrictEqual(L.checkinHistoryInRange([],90,now2),[]);
+console.log('checkin history ok');

@@ -20,7 +20,7 @@ cd tests
 export NODE_PATH=<path to node_modules containing jsdom>   # npm i jsdom
 ./bundle.sh            # rebuild tests/balance-tiles.html (required after editing index.html/css/js)
 node test.js             # pure logic tests (js/logic.js)
-node smoke2.js           # ...through smoke9.js — jsdom UI smoke tests
+node smoke2.js           # ...through smoke10.js — jsdom UI smoke tests
 node empty.js            # needs a static server on the port hardcoded in the file:
                           #   (cd .. && python3 -m http.server 8125)
                           # checks a fresh install starts with 3 starter tiles + Inbox
@@ -55,9 +55,10 @@ Single JSON blob in `localStorage` under key `well-tended-v1`, written by `save(
   tags:   [string],                                   // free-form, created as you go
   log:    [{ id, itemId, text, catId, at, rec }],     // completion history for the Ta-da tab
   checkin:{ ratings: { [catId]: 0..100 }, at: ms|null, notes: string },
+  checkinHistory: [{ id, at, ratings, notes }],       // frozen snapshots saved on each check-in, newest-last, never purged
   notes:  { html: string, updatedAt: ms|null },       // Home tab scratchpad, see below
   settings:{ tadaDays, tadaRecurring, tadaGroup, upRecurring, upGroup,
-             doneKeepDays, logKeepDays, checkinDotDays }
+             doneKeepDays, logKeepDays, checkinDotDays, ciHistoryDays }
 }
 ```
 - `type`: `note` | `goal` | `todo` | `recurring`. Every category can hold any mix.
@@ -96,6 +97,7 @@ Single JSON blob in `localStorage` under key `well-tended-v1`, written by `save(
 - Summary card lists "On the low side" and "On the high side". A reflection card has rotating prompts (including a "shrink this task" prompt) and a notes textarea.
 - Check-in tab shows a dot once days since the last check-in reaches `settings.checkinDotDays` (default 7, configurable). The view shows how long since the last one.
 - No per-item friction field, by decision — friction stays a reflective prompt only. No mid-week save: ratings save with the check mark only.
+- Finishing a check-in (the check mark) also appends a frozen snapshot `{ id, at, ratings, notes }` to `checkinHistory` via `saveCheckin()` — the live `checkin.ratings`/`checkin.notes` are never cleared by this, so the next check-in starts from what was last saved, by decision. A "History" section below the current check-in (divider + heading, never a separate tab or sheet) shows: a date-range toggle (`settings.ciHistoryDays`, 1/3/6/12 months, default 3 months), a per-category sparkline over that range, and a picker to select and review (read-only) any past snapshot's ratings and notes. History is never purged and isn't cleaned up when a category is deleted — old entries just stop rendering a row for it.
 
 **Housekeeping**: `purgeOld` removes done items from tiles after `doneKeepDays` and old log entries after `logKeepDays`; Ta-da history outlives the tile copies.
 

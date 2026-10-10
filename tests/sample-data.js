@@ -63,11 +63,21 @@ function seed() {
     at: Date.now() - 9 * 86400000,
     notes: ''
   };
+  const h = (daysAgo, ratings, notes) => ({ id: uid('h'), at: ago(daysAgo), ratings, notes });
+  const checkinHistory = [
+    h(118, { fitness: 30, cooking: 55, housework: 48, garden: 40, shopping: 50, career: 60, calm: 45, friends: 55, paperwork: 50, hobbies: 35 }, 'Settling into a new routine.'),
+    h(90, { fitness: 25, cooking: 58, housework: 45, garden: 35, shopping: 48, career: 68, calm: 40, friends: 52, paperwork: 52, hobbies: 32 }, ''),
+    h(63, { fitness: 20, cooking: 60, housework: 42, garden: 30, shopping: 46, career: 75, calm: 38, friends: 50, paperwork: 53, hobbies: 30 }, 'Work has been a lot.'),
+    h(42, { fitness: 18, cooking: 61, housework: 41, garden: 29, shopping: 46, career: 80, calm: 36, friends: 49, paperwork: 54, hobbies: 29 }, ''),
+    h(23, { fitness: 20, cooking: 62, housework: 40, garden: 28, shopping: 45, career: 83, calm: 35, friends: 50, paperwork: 55, hobbies: 30 }, 'Trying to carve out more rest time.'),
+    h(9, checkin.ratings, checkin.notes)
+  ];
   return {
     cats, items,
     tags: ['quick', 'active'],
     log,
     checkin,
+    checkinHistory,
     notes: { html: '', updatedAt: null },
     settings: {}
   };

@@ -61,6 +61,7 @@
     s.tags = s.tags || []; s.checkin = Object.assign({ ratings: {}, at: null, notes: '' }, s.checkin || {}); s.log = s.log || []; s.settings = s.settings || {};
     s.notes = (s.notes && typeof s.notes.html === 'string') ? s.notes : { html: '', updatedAt: null };
     s.collapse = s.collapse || {};
+    s.checkinHistory = Array.isArray(s.checkinHistory) ? s.checkinHistory : [];
     delete s.settings.notify; delete s.settings.day; delete s.settings.time;
     s.cats.forEach(function (c) { if (c.icon === undefined) c.icon = null; });
     s.items.forEach(function (i) { if (i.later === undefined) i.later = false; });
@@ -242,6 +243,7 @@
     return null;
   }
   /* ---------- Check-in view ---------- */
+  var CI_HISTORY_WINDOWS = [[30, '1 month'], [90, '3 months'], [180, '6 months'], [365, '1 year']];
   function ciPrompts() {
     var g = ratingGroups(state);
     var lowName = g.low.length ? g.low[0].name : null, highName = g.high.length ? g.high[0].name : null;
@@ -263,14 +265,61 @@
     if (!out) out = '<p class="hint">' + (rated ? 'Everything feels close to balanced.' : 'Move the sliders to build your snapshot.') + '</p>';
     return out;
   }
-  function ciRow(c, editing) {
-    var v = state.checkin.ratings[c.id], set = v != null, lab = ratingLabel(v), body;
+  function ciRow(c, editing, ratings) {
+    ratings = ratings || state.checkin.ratings;
+    var v = ratings[c.id], set = v != null, lab = ratingLabel(v), body;
     if (editing) {
       body = '<div class="ci-track" style="--v:' + (set ? v : 50) + '"><input class="ci-range" type="range" min="0" max="100" step="1" value="' + (set ? v : 50) + '" data-ci="' + c.id + '" aria-label="' + esc(c.name) + ', from neglected to over-focused" aria-valuetext="' + lab + '"></div>';
     } else {
       body = '<div class="ci-track" role="img" aria-label="' + esc(c.name) + ': ' + lab + '" style="--v:' + (set ? v : 50) + '">' + (set ? '<span class="pip"></span>' : '<span class="ci-unset">not set</span>') + '</div>';
     }
     return '<div class="ci-row sw-' + c.color + (set ? '' : ' unset') + '"><span class="ci-name" title="' + esc(c.name) + '">' + (c.icon && ICONS[c.icon] ? catIcon(c, 'ci-ic') : '<i></i>') + '<span class="nm">' + esc(c.name) + '</span></span>' + body + '</div>';
+  }
+  function ciSparkSVG(pts, days, now) {
+    var W = 120, H = 40, PAD = 3, BAR = 4, from = now - days * 86400000;
+    function x(at) { return PAD + ((at - from) / (days * 86400000)) * (W - PAD * 2); }
+    function y(v) { return PAD + (1 - v / 100) * (H - PAD * 2); }
+    var mid = y(50);
+    var ref = '<line x1="0" y1="' + mid.toFixed(1) + '" x2="' + W + '" y2="' + mid.toFixed(1) + '" class="ci-spark-ref"/>';
+    var svgOpen = '<svg class="ci-spark" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="';
+    if (!pts.length) return svgOpen + 'No check-ins in range">' + ref + '</svg>';
+    var last = pts[pts.length - 1];
+    var marks = pts.map(function (p) {
+      var py = y(p.v), top = Math.min(py, mid), h = Math.max(Math.abs(py - mid), 1);
+      // The bar alone is nearly invisible for a value close to the baseline, so a dot at the actual point always marks it.
+      return '<rect class="ci-spark-bar" x="' + (x(p.at) - BAR / 2).toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + BAR + '" height="' + h.toFixed(1) + '" rx="1"/>' +
+        '<circle class="ci-spark-dot" cx="' + x(p.at).toFixed(1) + '" cy="' + py.toFixed(1) + '" r="1.8"/>';
+    }).join('');
+    return svgOpen + 'trend, most recently ' + ratingLabel(last.v) + '">' + ref + marks + '</svg>';
+  }
+  function ciSparkRow(c, inRange, days, now) {
+    var pts = inRange.filter(function (e) { return e.ratings[c.id] != null; }).map(function (e) { return { at: e.at, v: e.ratings[c.id] }; });
+    return '<div class="ci-row sw-' + c.color + '"><span class="ci-name" title="' + esc(c.name) + '">' + (c.icon && ICONS[c.icon] ? catIcon(c, 'ci-ic') : '<i></i>') + '<span class="nm">' + esc(c.name) + '</span></span>' + ciSparkSVG(pts, days, now) + '</div>';
+  }
+  function ciHistoryPicker(inRange) {
+    var opts = '<option value="">Select a past check-in…</option>' + inRange.slice().reverse().map(function (e) {
+      return '<option value="' + e.id + '"' + (e.id === ui.ciHistorySel ? ' selected' : '') + '>' + esc(fmtPast(ds(new Date(e.at)))) + '</option>';
+    }).join('');
+    return '<label class="fld ci-history-pick"><span>Review a past check-in</span><select id="ci-history-pick">' + opts + '</select></label>';
+  }
+  function ciHistoryViewer(entry) {
+    if (!entry) return '';
+    return '<div class="ci-list ci-snapshot">' + state.cats.map(function (c) { return ciRow(c, false, entry.ratings); }).join('') + '</div>' +
+      (entry.notes ? '<div class="card ci-snapshot-notes"><h3 class="up-h" style="margin-top:0">Notes</h3><p>' + esc(entry.notes).replace(/\n/g, '<br>') + '</p></div>' : '');
+  }
+  function checkinHistorySection() {
+    var history = state.checkinHistory || [];
+    if (!history.length) {
+      return '<hr class="ci-history-divider"><h2 class="up-h" style="margin-top:0">History</h2><p class="hint">Save a check-in to start building your history.</p>';
+    }
+    var days = state.settings.ciHistoryDays || 90, now = Date.now();
+    var inRange = checkinHistoryInRange(history, days, now);
+    var win = CI_HISTORY_WINDOWS.map(function (w) { return '<label><input type="radio" name="ci-history-days" value="' + w[0] + '"' + (w[0] === days ? ' checked' : '') + '><span>' + w[1] + '</span></label>'; }).join('');
+    var entry = inRange.find(function (e) { return e.id === ui.ciHistorySel; }) || null;
+    return '<hr class="ci-history-divider"><h2 class="up-h" style="margin-top:0">History</h2>' +
+      '<div class="seg" role="radiogroup" aria-label="History range">' + win + '</div>' +
+      '<div class="ci-list ci-sparklines">' + state.cats.map(function (c) { return ciSparkRow(c, inRange, days, now); }).join('') + '</div>' +
+      ciHistoryPicker(inRange) + ciHistoryViewer(entry);
   }
   function checkinView() {
     var ci = state.checkin, d = daysSince(ci.at), edit = !!ui.ciEdit, last;
@@ -283,10 +332,11 @@
     return '<div class="ci-head"><p class="summary">' + last + '</p><div class="ci-actions">' + actions + '</div></div>' +
       (edit ? '<p class="hint ci-hint">Drag the sliders, then tap the check mark to save.</p>' : '') +
       '<div class="ci-legend" aria-hidden="true"><span></span><div><span>Neglected</span><span>Balanced</span><span>Over-<br>focused</span></div></div>' +
-      '<div class="ci-list' + (edit ? ' editing' : '') + '">' + state.cats.map(function (c) { return ciRow(c, edit); }).join('') + '</div>' +
+      '<div id="ci-current" class="ci-list' + (edit ? ' editing' : '') + '">' + state.cats.map(function (c) { return ciRow(c, edit); }).join('') + '</div>' +
       '<div id="ci-summary" class="card ci-summary">' + ciSummaryInner() + '</div>' +
       '<div class="card reflect"><h3 class="up-h" style="margin-top:0">Reflect</h3><p class="prompt">' + esc(p) + '</p><button class="btn flat" data-action="ci-prompt">Another prompt</button>' +
-      '<label class="fld"><span>Notes</span><textarea id="ci-notes" rows="3" placeholder="Jot down anything that comes up.">' + esc(ci.notes || '') + '</textarea></label></div>';
+      '<label class="fld"><span>Notes</span><textarea id="ci-notes" rows="3" placeholder="Jot down anything that comes up.">' + esc(ci.notes || '') + '</textarea></label></div>' +
+      checkinHistorySection();
   }
   function updateTabDot() {
     var due = checkinDue(state, keepDays('checkinDotDays', 7));
@@ -698,7 +748,7 @@
     if (!t) return;
     var a = t.dataset.action, id = t.dataset.id, it;
     switch (a) {
-      case 'tab': ui.tab = t.dataset.tab; ui.editTiles = false; ui.delAsk = null; if (ui.tab !== 'checkin') { ui.ciEdit = false; ui.ciDraft = null; } renderMain(); window.scrollTo(0, 0); break;
+      case 'tab': ui.tab = t.dataset.tab; ui.editTiles = false; ui.delAsk = null; if (ui.tab !== 'checkin') { ui.ciEdit = false; ui.ciDraft = null; ui.ciHistorySel = null; } renderMain(); window.scrollTo(0, 0); break;
       case 'open-cat': ui.openCat = id; ui.formFor = null; ui.dateFor = null; ui.reorder = false; ui.showDone = false; renderOverlay(); break;
       case 'close-overlay': ui.openCat = null; ui.formFor = null; ui.dateFor = null; renderAll(); break;
       case 'filter': ui.tag = t.dataset.tag || null; renderMain(); renderOverlay(); break;
@@ -785,7 +835,7 @@
       case 'ci-prompt': ui.promptIdx = (ui.promptIdx || 0) + 1; renderMain(); break;
       case 'ci-edit': ui.ciEdit = true; ui.ciDraft = JSON.stringify(state.checkin.ratings); renderMain(); break;
       case 'ci-cancel': if (ui.ciDraft) state.checkin.ratings = JSON.parse(ui.ciDraft); ui.ciEdit = false; ui.ciDraft = null; save(); renderMain(); break;
-      case 'ci-finish': state.checkin.at = Date.now(); ui.ciEdit = false; ui.ciDraft = null; save(); renderMain(); toast('Check-in saved', false); break;
+      case 'ci-finish': saveCheckin(state); ui.ciEdit = false; ui.ciDraft = null; save(); renderMain(); toast('Check-in saved', false); break;
       case 'toggle-done': ui.showDone = !ui.showDone; renderOverlay(); break;
       case 'toggle-sec': {
         var sec = t.dataset.sec; state.collapse = state.collapse || {};
@@ -842,6 +892,8 @@
       if (c && v) { c.name = v; save(); } else if (c) t.value = c.name;
     } else if (t.dataset && t.dataset.ci) { save();
     } else if (t.id === 'ci-notes') { state.checkin.notes = t.value; save();
+    } else if (t.name === 'ci-history-days') { state.settings.ciHistoryDays = Number(t.value); ui.ciHistorySel = null; save(); renderMain();
+    } else if (t.id === 'ci-history-pick') { ui.ciHistorySel = t.value || null; renderMain();
     } else if (t.id === 's-dotdays') { state.settings.checkinDotDays = Number(t.value); save(); updateTabDot();
     } else if (t.id === 'tada-rec') { state.settings.tadaRecurring = t.checked; save(); renderMain();
     } else if (t.name === 'tada-days') { state.settings.tadaDays = Number(t.value); save(); renderMain();

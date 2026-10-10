@@ -193,6 +193,7 @@ function clearDone(state, catId) {
 // ---------- Weekly check-in ----------
 // state.checkin = { ratings: { [catId]: 0..100 }, at: timestamp | null, notes: '' }
 // 0 = neglected, 50 = balanced, 100 = over-focused. Ratings are a snapshot; only the overall check-in has a date.
+// state.checkinHistory = [{ id, at, ratings, notes }] — frozen snapshots saved on each check-in, newest-last.
 function daysSince(ts) { if (!ts) return null; return Math.max(0, -diffDays(ds(new Date(ts)))); }
 function checkinDue(state, thresholdDays) {
   const d = daysSince(state.checkin && state.checkin.at);
@@ -215,6 +216,20 @@ function ratingGroups(state) {
     if (v <= 25) low.push(c); else if (v >= 76) high.push(c);
   });
   return { low, high };
+}
+// Snapshot the current ratings+notes into history. Ratings/notes are left untouched on state.checkin (never cleared on save).
+function saveCheckin(state, now) {
+  now = now || Date.now();
+  state.checkinHistory = state.checkinHistory || [];
+  state.checkinHistory.push({ id: uid('h'), at: now, ratings: Object.assign({}, state.checkin.ratings), notes: state.checkin.notes });
+  state.checkin.at = now;
+  return state.checkinHistory[state.checkinHistory.length - 1];
+}
+// Entries at or after (now - days). Ascending by time; callers reverse for most-recent-first display.
+function checkinHistoryInRange(history, days, now) {
+  now = now || Date.now();
+  const cut = now - days * 86400000;
+  return (history || []).filter((e) => e.at >= cut).sort((a, b) => a.at - b.at);
 }
 
 function emptyState() {
@@ -241,9 +256,10 @@ function emptyState() {
     ],
     tags: [], log: [],
     checkin: { ratings: {}, at: null, notes: '' },
+    checkinHistory: [],
     notes: { html: '', updatedAt: null },
     settings: {},
     collapse: {}
   };
 }
-if (typeof module !== 'undefined') module.exports = { emptyState, today, addDays, uid, daysSince, checkinDue, ratingLabel, ratingGroups, entryIsRecurring, tadaEntries, fmtPast, pastBucket, purgeOld, clearDone, upcomingItems, dateBucket, openSorted, moveItem, completeItem, addFreq, isTucked, slotSort, doneItems, fmtDue, nextOrder, diffDays };
+if (typeof module !== 'undefined') module.exports = { emptyState, today, addDays, uid, daysSince, checkinDue, ratingLabel, ratingGroups, saveCheckin, checkinHistoryInRange, entryIsRecurring, tadaEntries, fmtPast, pastBucket, purgeOld, clearDone, upcomingItems, dateBucket, openSorted, moveItem, completeItem, addFreq, isTucked, slotSort, doneItems, fmtDue, nextOrder, diffDays };

@@ -220,7 +220,7 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .notes-editor ul{margin:0;padding-left:20px}
 
 .form{display:flex;flex-direction:column;gap:12px}
-.form input[type=text],.form input[type=date],.form input[type=number],.form input[type=time],.form select,.form textarea,#sheet-root input[type=time],#sheet-root select{width:100%;min-width:0;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;font-size:16px}
+.form input[type=text],.form input[type=date],.form input[type=number],.form input[type=time],.form select,.form textarea,#sheet-root input[type=time],#sheet-root select,#ci-history-pick{width:100%;min-width:0;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;font-size:16px}
 #f-desc{min-height:68px;height:68px;font-size:16px;font-family:inherit;line-height:1.4;resize:vertical}
 .card .form input,.card .form select,.card .form textarea{background:var(--bg)}
 .fld{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted);min-width:0}
@@ -347,5 +347,13 @@ body.dragging{cursor:grabbing;-webkit-user-select:none;user-select:none}
 .reflect .fld{width:100%}
 .reflect textarea{width:100%;min-width:0;min-height:96px;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;font-size:16px}
 .prompt{margin:0;font:500 19px/1.35 var(--font-display)}
+.ci-history-divider{border:0;border-top:1px solid var(--line);margin:28px 0 18px}
+.ci-spark{display:block;width:100%;height:40px}
+.ci-spark-bar{fill:var(--t-dot)}
+.ci-spark-dot{fill:var(--t-dot)}
+.ci-spark-ref{stroke:var(--muted);stroke-width:1;opacity:.35}
+.ci-history-pick{margin-top:18px}
+.ci-snapshot{margin-top:10px}
+.ci-snapshot-notes p{margin:0;font-size:14px;white-space:pre-wrap}
 .btn.full{width:100%;padding:13px}
 @media (prefers-reduced-motion:no-preference){.tile,.chip,.btn{transition:transform .12s ease}.tile:active{transform:scale(.985)}}

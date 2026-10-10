@@ -9,7 +9,7 @@ assert(dot());
 click('[data-tab=checkin]');
 // read mode: compact meters, no sliders
 assert.strictEqual(d.querySelectorAll('.ci-range').length,0);
-assert.strictEqual(d.querySelectorAll('.ci-row').length,10);
+assert.strictEqual(d.querySelectorAll('#ci-current .ci-row').length,10);
 assert.strictEqual(d.querySelectorAll('.ci-row .pip').length,10);
 assert(d.querySelector('.ci-row').getAttribute('style')===null&&d.querySelector('.ci-track').getAttribute('style').includes('--v:22'));
 assert(d.querySelector('.summary').textContent.includes('9 days ago'));
@@ -41,8 +41,8 @@ const p0=d.querySelector('.prompt').textContent;click('[data-action=ci-prompt]')
 chg('#ci-notes',e=>e.value='walk first');click('[data-action=ci-prompt]');assert.strictEqual(d.querySelector('#ci-notes').value,'walk first');
 // new category shows as not set; tapping it in edit mode sets balanced
 click('[data-tab=tiles]');click('[data-action=toggle-edit]');click('[data-action=cat-add]');click('[data-action=toggle-edit]');
-click('[data-tab=checkin]');let rows=d.querySelectorAll('.ci-row');assert(rows[rows.length-1].querySelector('.ci-unset'));
-click('[data-action=ci-edit]');rows=d.querySelectorAll('.ci-row');const last=rows[rows.length-1];
+click('[data-tab=checkin]');let rows=d.querySelectorAll('#ci-current .ci-row');assert(rows[rows.length-1].querySelector('.ci-unset'));
+click('[data-action=ci-edit]');rows=d.querySelectorAll('#ci-current .ci-row');const last=rows[rows.length-1];
 last.querySelector('.ci-range').dispatchEvent(new w.MouseEvent('click',{bubbles:true}));assert(!last.classList.contains('unset'));
 // settings dot threshold still works
 click('[data-action=settings]');chg('#s-dotdays',e=>e.value='14');assert.strictEqual(d.querySelector('#s-dotdays').value,'14');

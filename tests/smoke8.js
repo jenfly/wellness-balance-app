@@ -13,5 +13,5 @@ assert(JSON.parse(w.localStorage.getItem('well-tended-v1')).cats[0].icon==='hear
 click('[data-action=cat-icon-toggle]');click('.ig[data-icon=""]');
 assert(JSON.parse(w.localStorage.getItem('well-tended-v1')).cats[0].icon===null);
 click('[data-action=toggle-edit]');click('[data-tab=checkin]');
-assert(d.querySelectorAll('.ci-ic').length===9);
+assert(d.querySelectorAll('#ci-current .ci-ic').length===9);
 console.log('ok');
