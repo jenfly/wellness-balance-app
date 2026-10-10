@@ -7,6 +7,6 @@ const lists=d.querySelectorAll('.overlay .items');assert.strictEqual(lists.lengt
 assert(lists[0].textContent.includes('Mop')&&!lists[0].textContent.includes('Clean the oven'));
 assert(lists[1].textContent.includes('Clean the oven'));
 const secTitles=[...d.querySelectorAll('.sec-title')].map(x=>x.textContent);
-assert.deepStrictEqual(secTitles,['Up next','Less frequent']);
+assert.deepStrictEqual(secTitles,['Current','Less frequent']);
 assert.deepStrictEqual([...d.querySelectorAll('.tab > span:last-child')].map(x=>x.textContent),['Home','Upcoming','Ta-da','Check-in']);
 console.log('ok');
