@@ -127,7 +127,10 @@ function dateBucket(due) {
   if (n < 0) return { key: 'earlier', label: 'Earlier' };
   if (n === 0) return { key: 'today', label: 'Today' };
   if (n === 1) return { key: 'tomorrow', label: 'Tomorrow' };
-  if (n <= 7) return { key: 'd' + due, label: d.toLocaleDateString('en-CA', { weekday: 'long' }) };
+  if (n <= 6) {
+    const wd = d.toLocaleDateString('en-CA', { weekday: 'long' }), mo = d.toLocaleDateString('en-CA', { month: 'long' });
+    return { key: 'd' + due, label: wd + ', ' + mo + ' ' + d.getDate() };
+  }
   const sameYear = d.getFullYear() === now.getFullYear();
   const sameMonth = sameYear && d.getMonth() === now.getMonth();
   const m = d.toLocaleDateString('en-CA', { month: 'long' });
