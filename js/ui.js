@@ -301,7 +301,7 @@
     if (!history.length) {
       return '<hr class="ci-history-divider"><h2 class="up-h" style="margin-top:0">History</h2><p class="hint">Save a check-in to start building your history.</p>';
     }
-    var days = state.settings.ciHistoryDays || 90, now = Date.now();
+    var days = state.settings.ciHistoryDays || 30, now = Date.now();
     var inRange = checkinHistoryInRange(history, days, now);
     var win = CI_HISTORY_WINDOWS.map(function (w) { return '<label><input type="radio" name="ci-history-days" value="' + w[0] + '"' + (w[0] === days ? ' checked' : '') + '><span>' + w[1] + '</span></label>'; }).join('');
     var entry = inRange.find(function (e) { return e.id === ui.ciHistorySel; }) || null;
