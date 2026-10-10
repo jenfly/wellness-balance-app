@@ -1,0 +1,5 @@
+node_modules/
+tests/balance-tiles.html
+
+.DS_Store
+*.swp
