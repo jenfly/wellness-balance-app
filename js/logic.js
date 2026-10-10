@@ -217,13 +217,35 @@ function ratingGroups(state) {
   });
   return { low, high };
 }
-// Snapshot the current ratings+notes into history. Ratings/notes are left untouched on state.checkin (never cleared on save).
+function isSameDay(a, b) {
+  const da = new Date(a), db = new Date(b);
+  return da.getFullYear() === db.getFullYear() && da.getMonth() === db.getMonth() && da.getDate() === db.getDate();
+}
+// The history entry for "today", if the most recent one falls on today — at most one check-in per day, by decision.
+function todayCheckinEntry(state, now) {
+  now = now || Date.now();
+  const h = state.checkinHistory || [];
+  const last = h[h.length - 1];
+  return (last && isSameDay(last.at, now)) ? last : null;
+}
+// Snapshot the current ratings+notes into history, overwriting today's entry if one already exists.
+// Ratings/notes are left untouched on state.checkin (never cleared on save).
 function saveCheckin(state, now) {
   now = now || Date.now();
   state.checkinHistory = state.checkinHistory || [];
-  state.checkinHistory.push({ id: uid('h'), at: now, ratings: Object.assign({}, state.checkin.ratings), notes: state.checkin.notes });
+  const existing = todayCheckinEntry(state, now);
+  const entry = { id: existing ? existing.id : uid('h'), at: now, ratings: Object.assign({}, state.checkin.ratings), notes: state.checkin.notes };
+  if (existing) state.checkinHistory[state.checkinHistory.length - 1] = entry;
+  else state.checkinHistory.push(entry);
   state.checkin.at = now;
-  return state.checkinHistory[state.checkinHistory.length - 1];
+  return entry;
+}
+// Amend today's saved entry with the current notes text, without touching its ratings or timestamp.
+function updateTodayCheckinNotes(state, notes, now) {
+  const entry = todayCheckinEntry(state, now);
+  if (!entry) return null;
+  entry.notes = notes;
+  return entry;
 }
 // Entries at or after (now - days). Ascending by time; callers reverse for most-recent-first display.
 function checkinHistoryInRange(history, days, now) {
@@ -262,4 +284,4 @@ function emptyState() {
     collapse: {}
   };
 }
-if (typeof module !== 'undefined') module.exports = { emptyState, today, addDays, uid, daysSince, checkinDue, ratingLabel, ratingGroups, saveCheckin, checkinHistoryInRange, entryIsRecurring, tadaEntries, fmtPast, pastBucket, purgeOld, clearDone, upcomingItems, dateBucket, openSorted, moveItem, completeItem, addFreq, isTucked, slotSort, doneItems, fmtDue, nextOrder, diffDays };
+if (typeof module !== 'undefined') module.exports = { emptyState, today, addDays, uid, daysSince, checkinDue, ratingLabel, ratingGroups, saveCheckin, todayCheckinEntry, updateTodayCheckinNotes, checkinHistoryInRange, entryIsRecurring, tadaEntries, fmtPast, pastBucket, purgeOld, clearDone, upcomingItems, dateBucket, openSorted, moveItem, completeItem, addFreq, isTucked, slotSort, doneItems, fmtDue, nextOrder, diffDays };

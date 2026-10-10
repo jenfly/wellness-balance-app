@@ -312,6 +312,8 @@
   }
   function checkinView() {
     var ci = state.checkin, d = daysSince(ci.at), edit = !!ui.ciEdit, last;
+    var todayEntry = todayCheckinEntry(state);
+    var notesChanged = !!todayEntry && (todayEntry.notes || '') !== (ci.notes || '');
     if (d === null) last = 'No check-in yet';
     else last = 'Last check-in <strong>' + (d === 0 ? 'today' : d === 1 ? 'yesterday' : d + ' days ago') + '</strong>';
     var actions = edit
@@ -323,7 +325,9 @@
       '<div id="ci-current" class="ci-list' + (edit ? ' editing' : '') + '">' + state.cats.map(function (c) { return ciRow(c, edit); }).join('') + '</div>' +
       '<div id="ci-summary" class="card ci-summary">' + ciSummaryInner() + '</div>' +
       '<div class="card reflect"><h3 class="up-h" style="margin-top:0">Reflect</h3>' +
-      '<label class="fld"><span>Notes</span><textarea id="ci-notes" rows="3" placeholder="Jot down anything that comes up.">' + esc(ci.notes || '') + '</textarea></label></div>' +
+      '<label class="fld"><span>Notes</span><textarea id="ci-notes" rows="3" placeholder="Jot down anything that comes up.">' + esc(ci.notes || '') + '</textarea></label>' +
+      (notesChanged ? '<p class="hint">Notes have changed since today&rsquo;s check-in.</p><button class="btn" data-action="ci-save-notes">Save notes to today&rsquo;s check-in</button>' : '') +
+      '</div>' +
       checkinHistorySection();
   }
   function updateTabDot() {
@@ -823,6 +827,7 @@
       case 'ci-edit': ui.ciEdit = true; ui.ciDraft = JSON.stringify(state.checkin.ratings); renderMain(); break;
       case 'ci-cancel': if (ui.ciDraft) state.checkin.ratings = JSON.parse(ui.ciDraft); ui.ciEdit = false; ui.ciDraft = null; save(); renderMain(); break;
       case 'ci-finish': saveCheckin(state); ui.ciEdit = false; ui.ciDraft = null; save(); renderMain(); toast('Check-in saved', false); break;
+      case 'ci-save-notes': updateTodayCheckinNotes(state, state.checkin.notes); save(); renderMain(); toast('Notes saved to today’s check-in', false); break;
       case 'toggle-done': ui.showDone = !ui.showDone; renderOverlay(); break;
       case 'toggle-sec': {
         var sec = t.dataset.sec; state.collapse = state.collapse || {};
@@ -878,7 +883,7 @@
       var c = catOf(t.dataset.catName), v = t.value.trim();
       if (c && v) { c.name = v; save(); } else if (c) t.value = c.name;
     } else if (t.dataset && t.dataset.ci) { save();
-    } else if (t.id === 'ci-notes') { state.checkin.notes = t.value; save();
+    } else if (t.id === 'ci-notes') { state.checkin.notes = t.value; save(); renderMain();
     } else if (t.name === 'ci-history-days') { state.settings.ciHistoryDays = Number(t.value); ui.ciHistorySel = null; save(); renderMain();
     } else if (t.id === 'ci-history-pick') { ui.ciHistorySel = t.value || null; renderMain();
     } else if (t.id === 's-dotdays') { state.settings.checkinDotDays = Number(t.value); save(); updateTabDot();
