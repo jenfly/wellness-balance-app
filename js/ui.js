@@ -85,7 +85,6 @@
   function allCats() { return state.cats.concat([INBOX]); }
   function tagColor(name) { var i = state.tags.indexOf(name); return SW[(Math.max(i, 0) * 3 + 1) % SW.length]; }
   function tagBadge(name) { return '<span class="tag"><i style="background:var(--' + tagColor(name) + '-dot)"></i>' + esc(name) + '</span>'; }
-  function tagDots(tags) { return tags.map(function (t) { return '<span class="dot" title="' + esc(t) + '" style="background:var(--' + tagColor(t) + '-dot)"></span>'; }).join(''); }
   function plural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
 
   /* ---------- Tiles view ---------- */
@@ -94,7 +93,6 @@
     if (i.pinned) meta += '<span class="pin" aria-label="Pinned">' + icon('pin') + '</span>';
     if (i.type === 'recurring') meta += '<span class="rep" aria-label="Repeats">' + icon('repeat') + '</span>';
     if (i.due) meta += '<span class="due">' + esc(fmtDue(i.due)) + '</span>';
-    meta += tagDots(i.tags);
     var lead = (i.type === 'todo' || i.type === 'recurring')
       ? '<button class="pchk" data-action="item-toggle" data-id="' + i.id + '" aria-label="Mark done: ' + esc(i.text) + '"></button>'
       : (i.type === 'goal' ? '<span class="bul" aria-label="Goal">' + icon('flag') + '</span>' : '<span class="bul"></span>');
