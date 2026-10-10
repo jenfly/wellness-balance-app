@@ -135,12 +135,13 @@
     return '<div class="tile edit sw-' + c.color + '" data-sort="tile" data-id="' + c.id + '"><div class="edit-top"><button class="icon-pick-btn" data-action="cat-icon-toggle" data-id="' + c.id + '" aria-expanded="' + (ui.iconPick === c.id) + '" aria-label="Choose icon for ' + esc(c.name) + '">' + (c.icon && ICONS[c.icon] ? icon(c.icon) : '<span class="ip-none">+</span>') + '</button><input class="name-input" data-cat-name="' + c.id + '" value="' + esc(c.name) + '" aria-label="Category name" maxlength="40">' +
       '<button class="grip" data-grip="tile" data-id="' + c.id + '" aria-label="Reorder ' + esc(c.name) + '. Drag, or use the arrow keys.">' + icon('grip') + '</button></div>' + (ui.iconPick === c.id ? iconGrid(c) : '') + '<div class="swatches">' + sw + '</div>' + tools + '</div>';
   }
+  function tagChipsHTML() {
+    if (!state.tags.length) return '';
+    return '<div class="filters" role="group" aria-label="Filter by tag"><button class="chip' + (!ui.tag ? ' on' : '') + '" data-action="filter" data-tag="">All</button>' +
+      state.tags.map(function (t) { return '<button class="chip' + (ui.tag === t ? ' on' : '') + '" data-action="filter" data-tag="' + esc(t) + '">' + esc(t) + '</button>'; }).join('') + '</div>';
+  }
   function tilesView() {
-    var chips = '';
-    if (state.tags.length) {
-      chips = '<div class="filters" role="group" aria-label="Filter by tag"><button class="chip' + (!ui.tag ? ' on' : '') + '" data-action="filter" data-tag="">All</button>' +
-        state.tags.map(function (t) { return '<button class="chip' + (ui.tag === t ? ' on' : '') + '" data-action="filter" data-tag="' + esc(t) + '">' + esc(t) + '</button>'; }).join('') + '</div>';
-    }
+    var chips = tagChipsHTML();
     var tiles = state.cats.map(function (c, i) { return ui.editTiles ? editTile(c) : tile(c, false); }).join('');
     if (ui.editTiles) tiles += '<button class="tile add-tile" data-action="cat-add">' + icon('plus') + ' Add category</button>';
     tiles += tile(INBOX, true);
@@ -427,18 +428,19 @@
     var c = catOf(ui.openCat);
     if (!c) { ui.openCat = null; renderOverlay(); return; }
     var prev = root.querySelector('.overlay'), st = prev ? prev.scrollTop : 0;
-    var open = openSorted(state, c.id), done = doneItems(state, c.id);
+    var tagged = function (i) { return !ui.tag || i.tags.indexOf(ui.tag) >= 0; };
+    var open = openSorted(state, c.id).filter(tagged), done = doneItems(state, c.id).filter(tagged);
     var main = open.filter(function (i) { return !i.later && (!isTucked(i) || i.pinned); });
     var less = open.filter(function (i) { return !i.later && isTucked(i) && !i.pinned; });
     var later = open.filter(function (i) { return i.later; });
     var top = '';
     var html = '<div class="overlay sw-' + c.color + '" role="dialog" aria-modal="true" aria-label="' + esc(c.name) + '">' +
       '<div class="ov-head"><div class="in"><button class="icon-btn" data-action="close-overlay" aria-label="Back to tiles">' + icon('left') + '</button><h2>' + catIcon(c) + '<span>' + esc(c.name) + '</span></h2>' +
-      '</div></div>' +
+      '</div>' + (state.tags.length ? '<div class="in">' + tagChipsHTML() + '</div>' : '') + '</div>' +
       '<div class="ov-body">' + top + '<ul class="items">' + main.map(rowHTML).join('') + '</ul>' +
       (less.length ? '<h3 class="sec-title">Less frequent</h3><p class="sec-hint">Repeats every 2 months or less often.</p><ul class="items">' + less.map(rowHTML).join('') + '</ul>' : '') +
       (later.length ? '<h3 class="sec-title">For later</h3><ul class="items">' + later.map(rowHTML).join('') + '</ul>' : '') +
-      (!open.length ? '<p class="hint">Nothing open here. Tap + to add something.</p>' : '') +
+      (!open.length ? '<p class="hint">' + (ui.tag ? 'Nothing with this tag' : 'Nothing open here. Tap + to add something.') + '</p>' : '') +
       (done.length ? '<div class="done-bar"><button class="done-toggle" data-action="toggle-done" aria-expanded="' + ui.showDone + '">Done (' + done.length + ') ' + (ui.showDone ? 'hide' : 'show') + '</button><button class="text-btn" data-action="clear-done">Clear</button></div>' + (ui.showDone ? '<ul class="items">' + done.map(rowHTML).join('') + '</ul>' : '') : '') +
       '</div></div>';
     root.innerHTML = html;
@@ -691,7 +693,7 @@
       case 'tab': ui.tab = t.dataset.tab; ui.editTiles = false; ui.delAsk = null; if (ui.tab !== 'checkin') { ui.ciEdit = false; ui.ciDraft = null; } renderMain(); window.scrollTo(0, 0); break;
       case 'open-cat': ui.openCat = id; ui.formFor = null; ui.dateFor = null; ui.reorder = false; ui.showDone = false; renderOverlay(); break;
       case 'close-overlay': ui.openCat = null; ui.formFor = null; ui.dateFor = null; renderAll(); break;
-      case 'filter': ui.tag = t.dataset.tag || null; renderMain(); break;
+      case 'filter': ui.tag = t.dataset.tag || null; renderMain(); renderOverlay(); break;
       case 'toggle-edit': ui.editTiles = !ui.editTiles; ui.delAsk = null; ui.iconPick = null; renderMain(); break;
       case 'note-bold': document.execCommand('bold'); syncNotes(); break;
       case 'note-italic': document.execCommand('italic'); syncNotes(); break;

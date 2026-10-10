@@ -153,6 +153,7 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .overlay{position:fixed;inset:0;z-index:40;background:var(--bg);overflow-y:auto;overscroll-behavior:contain}
 .ov-head{position:sticky;top:0;z-index:2;background:var(--t-bg);color:var(--t-fg);padding:calc(env(safe-area-inset-top,0px) + 6px) 8px 8px}
 .ov-head .in{max-width:520px;margin-inline:auto;display:flex;align-items:center;gap:4px}
+.ov-head .in+.in{margin-top:8px}
 .ov-head h2{flex:1;margin:0;font:600 24px/1.15 var(--font-display);min-width:0;overflow-wrap:anywhere}
 .ov-head .icon-btn{color:var(--t-fg)}
 .ov-head .text-btn{color:var(--t-fg)}
