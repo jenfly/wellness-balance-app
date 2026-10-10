@@ -122,6 +122,7 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .pk-m{display:flex;align-items:center;gap:6px;flex-wrap:wrap;color:var(--t-fg)}
 .pk-m .pin svg.i{width:12px;height:12px}
 .due{font-size:11.5px;line-height:1;padding:3px 8px;border-radius:999px;background:var(--chip);color:var(--t-fg);white-space:nowrap}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block}
 .more,.empty{margin:0;font-size:12.5px;opacity:.75}
 .tile .more{margin-top:auto}
 .tile.edit{cursor:default;gap:10px;grid-column:1/-1;min-height:0}

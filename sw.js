@@ -1,6 +1,6 @@
 /* Well Tended service worker: cache the app shell, work offline.
    Bump VERSION whenever any app file changes so phones pick up the update. */
-var VERSION = 'v37';
+var VERSION = 'v38';
 var CACHE = 'well-tended-' + VERSION;
 var SHELL = ['./', 'index.html', 'css/styles.css', 'js/logic.js', 'js/ui.js', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png', 'icons/sprout.svg'];
