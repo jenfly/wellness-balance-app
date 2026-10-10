@@ -495,6 +495,31 @@
   }
   function renderAll() { renderMain(); renderOverlay(); renderSheet(); }
 
+  /* ---------- Back-button navigation ----------
+     Push one history entry per open overlay/form/sheet layer so the phone's
+     hardware/gesture back button closes a layer instead of exiting the app.
+     closeNavLayersTo() is idempotent so it's safe to run after both a real
+     popstate (hardware back) and our own history.go() (an in-app close). */
+  function navLayers() { return (ui.openCat ? 1 : 0) + (ui.formFor ? 1 : 0) + (ui.sheet ? 1 : 0); }
+  function closeNavLayersTo(target) {
+    while (navLayers() > target) {
+      if (ui.sheet) { ui.sheet = null; ui.restoreOffer = null; ui.driveStatus = null; }
+      else if (ui.formFor) { ui.formFor = null; }
+      else if (ui.openCat) { ui.openCat = null; ui.dateFor = null; }
+      else break;
+    }
+  }
+  function syncNavHistory() {
+    var want = navLayers(), have = (history.state && history.state.wtDepth) || 0;
+    if (want > have) { for (var i = have; i < want; i++) history.pushState({ wtDepth: i + 1 }, ''); }
+    else if (want < have) { history.go(want - have); }
+  }
+  window.addEventListener('popstate', function (e) {
+    var before = navLayers();
+    closeNavLayersTo((e.state && e.state.wtDepth) || 0);
+    if (navLayers() !== before) renderAll();
+  });
+
   /* ---------- Toast and undo ---------- */
   function takeSnapshot() { snapshot = JSON.stringify({ cats: state.cats, items: state.items, tags: state.tags, log: state.log, checkin: state.checkin, settings: state.settings }); }
   function toast(msg, withUndo) {
@@ -775,6 +800,7 @@
       case 'restore-confirm': doRestoreConfirm(); break;
       case 'restore-cancel': ui.restoreOffer = null; renderSheet(); break;
     }
+    syncNavHistory();
   });
   document.addEventListener('keydown', function (e) {
     if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('.tile[role="button"]')) {
@@ -783,7 +809,8 @@
       if (ui.sheet) { ui.sheet = null; renderSheet(); }
       else if (ui.formFor) { ui.formFor = null; renderOverlay(); }
       else if (ui.openCat) { ui.openCat = null; renderAll(); }
-    }
+    } else return;
+    syncNavHistory();
   });
   document.addEventListener('change', function (e) {
     var t = e.target;
