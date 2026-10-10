@@ -3,10 +3,14 @@ const html='<!doctype html><html><body>'+fs.readFileSync('balance-tiles.html','u
 const dom=new JSDOM(html,{runScripts:'dangerously',pretendToBeVisual:true,url:'https://example.com/'});
 const w=dom.window,d=w.document;w.scrollTo=()=>{};
 d.querySelector('.tile[data-id=housework]').dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
-const lists=d.querySelectorAll('.overlay .items');assert.strictEqual(lists.length,2);
+let lists=d.querySelectorAll('.overlay .items');assert.strictEqual(lists.length,1);
 assert(lists[0].textContent.includes('Mop')&&!lists[0].textContent.includes('Clean the oven'));
+const secTitlesCollapsed=[...d.querySelectorAll('.sec-title')].map(x=>x.textContent.trim());
+assert.deepStrictEqual(secTitlesCollapsed,['Current','Less frequent (1)']);
+d.querySelector('[data-action=toggle-sec][data-sec=less]').dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
+lists=d.querySelectorAll('.overlay .items');assert.strictEqual(lists.length,2);
 assert(lists[1].textContent.includes('Clean the oven'));
-const secTitles=[...d.querySelectorAll('.sec-title')].map(x=>x.textContent);
-assert.deepStrictEqual(secTitles,['Current','Less frequent']);
+const secTitles=[...d.querySelectorAll('.sec-title')].map(x=>x.textContent.trim());
+assert.deepStrictEqual(secTitles,['Current','Less frequent (1)']);
 assert.deepStrictEqual([...d.querySelectorAll('.tab > span:last-child')].map(x=>x.textContent),['Home','Upcoming','Ta-da','Check-in']);
 console.log('ok');

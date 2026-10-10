@@ -60,6 +60,7 @@
     s.version = 1;
     s.tags = s.tags || []; s.checkin = Object.assign({ ratings: {}, at: null, notes: '' }, s.checkin || {}); s.log = s.log || []; s.settings = s.settings || {};
     s.notes = (s.notes && typeof s.notes.html === 'string') ? s.notes : { html: '', updatedAt: null };
+    s.collapse = s.collapse || {};
     delete s.settings.notify; delete s.settings.day; delete s.settings.time;
     s.cats.forEach(function (c) { if (c.icon === undefined) c.icon = null; });
     s.items.forEach(function (i) { if (i.later === undefined) i.later = false; });
@@ -421,6 +422,12 @@
     return '<li class="row' + (i.done ? ' done' : '') + '"' + (i.done ? '' : ' data-sort="item" data-id="' + i.id + '" data-group="' + (i.pinned ? 'p' : 'u') + '"') + '><div class="row-track"><div class="row-content">' + top + body + '</div>' +
       '<button class="row-delete" data-action="item-delete" data-id="' + i.id + '" aria-label="Delete: ' + esc(i.text) + '">' + icon('trash') + '</button></div></li>';
   }
+  function collapsibleSectionHTML(sec, title, hint, items, open) {
+    return '<h3 class="sec-title"><button type="button" class="sec-toggle" data-action="toggle-sec" data-sec="' + sec + '" aria-expanded="' + open + '">' +
+      '<span>' + esc(title) + ' (' + items.length + ')</span>' + icon(open ? 'up' : 'down') + '</button></h3>' +
+      (hint ? '<p class="sec-hint">' + hint + '</p>' : '') +
+      (open ? '<ul class="items">' + items.map(rowHTML).join('') + '</ul>' : '');
+  }
   function renderOverlay() {
     var root = $('#overlay-root');
     swipeOpen = null; swp = null;
@@ -433,13 +440,14 @@
     var main = open.filter(function (i) { return !i.later && (!isTucked(i) || i.pinned); });
     var less = open.filter(function (i) { return !i.later && isTucked(i) && !i.pinned; });
     var later = open.filter(function (i) { return i.later; });
+    var cs = (state.collapse && state.collapse[c.id]) || {};
     var top = '';
     var html = '<div class="overlay sw-' + c.color + '" role="dialog" aria-modal="true" aria-label="' + esc(c.name) + '">' +
       '<div class="ov-head"><div class="in"><button class="icon-btn" data-action="close-overlay" aria-label="Back to tiles">' + icon('left') + '</button><h2>' + catIcon(c) + '<span>' + esc(c.name) + '</span></h2>' +
       '</div>' + (state.tags.length ? '<div class="in">' + tagChipsHTML() + '</div>' : '') + '</div>' +
       '<div class="ov-body">' + top + (main.length ? '<h3 class="sec-title">Current</h3><ul class="items">' + main.map(rowHTML).join('') + '</ul>' : '') +
-      (less.length ? '<h3 class="sec-title">Less frequent</h3><p class="sec-hint">Repeats every 2 months or less often.</p><ul class="items">' + less.map(rowHTML).join('') + '</ul>' : '') +
-      (later.length ? '<h3 class="sec-title">For later</h3><ul class="items">' + later.map(rowHTML).join('') + '</ul>' : '') +
+      (less.length ? collapsibleSectionHTML('less', 'Less frequent', 'Repeats every 2 months or less often.', less, !!cs.less) : '') +
+      (later.length ? collapsibleSectionHTML('later', 'For later', null, later, !!cs.later) : '') +
       (!open.length ? '<p class="hint">' + (ui.tag ? 'Nothing with this tag' : 'Nothing open here. Tap + to add something.') + '</p>' : '') +
       (done.length ? '<div class="done-bar"><button class="done-toggle" data-action="toggle-done" aria-expanded="' + ui.showDone + '">Done (' + done.length + ') ' + (ui.showDone ? 'hide' : 'show') + '</button><button class="text-btn" data-action="clear-done">Clear</button></div>' + (ui.showDone ? '<ul class="items">' + done.map(rowHTML).join('') + '</ul>' : '') : '') +
       '</div></div>';
@@ -722,6 +730,7 @@
         state.items.filter(function (x) { return x.catId === id; }).forEach(function (x) { x.catId = dest; x.order = nextOrder(state, dest); x.manual = false; });
         state.log.forEach(function (l) { if (l.catId === id) l.catId = dest; });
         delete state.checkin.ratings[id];
+        delete state.collapse[id];
         state.cats = state.cats.filter(function (c) { return c.id !== id; });
         ui.delAsk = null; save(); renderMain(); toast('Category deleted', true); break;
       }
@@ -778,6 +787,11 @@
       case 'ci-cancel': if (ui.ciDraft) state.checkin.ratings = JSON.parse(ui.ciDraft); ui.ciEdit = false; ui.ciDraft = null; save(); renderMain(); break;
       case 'ci-finish': state.checkin.at = Date.now(); ui.ciEdit = false; ui.ciDraft = null; save(); renderMain(); toast('Check-in saved', false); break;
       case 'toggle-done': ui.showDone = !ui.showDone; renderOverlay(); break;
+      case 'toggle-sec': {
+        var sec = t.dataset.sec; state.collapse = state.collapse || {};
+        var cc = state.collapse[ui.openCat] = state.collapse[ui.openCat] || {};
+        cc[sec] = !cc[sec]; save(); renderOverlay(); break;
+      }
       case 'fab': ui.formFor = null; ui.sheet = { kind: 'add', catId: ui.openCat || 'inbox' }; renderAll(); var f3 = $('#sheet-root #f-text'); if (f3) f3.focus(); break;
       case 'settings': ui.sheet = { kind: 'settings' }; ui.resetAsk = false; ui.showJson = false; ui.restoreOffer = null; ui.driveStatus = null; renderSheet(); break;
       case 'close-sheet': ui.sheet = null; ui.restoreOffer = null; ui.driveStatus = null; renderSheet(); break;

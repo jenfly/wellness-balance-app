@@ -242,7 +242,8 @@ function emptyState() {
     tags: [], log: [],
     checkin: { ratings: {}, at: null, notes: '' },
     notes: { html: '', updatedAt: null },
-    settings: {}
+    settings: {},
+    collapse: {}
   };
 }
 if (typeof module !== 'undefined') module.exports = { emptyState, today, addDays, uid, daysSince, checkinDue, ratingLabel, ratingGroups, entryIsRecurring, tadaEntries, fmtPast, pastBucket, purgeOld, clearDone, upcomingItems, dateBucket, openSorted, moveItem, completeItem, addFreq, isTucked, slotSort, doneItems, fmtDue, nextOrder, diffDays };
