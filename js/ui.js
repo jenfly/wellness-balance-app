@@ -183,13 +183,13 @@
         groups[idx[b.key]].items.push(i);
       });
       body = groups.map(function (g) {
-        return '<section class="up-group"><h3 class="up-h">' + esc(g.label) + '</h3><ul class="items">' + g.items.map(function (i) { return upRow(i, 'date', g.key); }).join('') + '</ul></section>';
+        return '<section class="up-group compact"><h3 class="up-h">' + esc(g.label) + '</h3><ul class="items compact">' + g.items.map(function (i) { return upRow(i, 'date', g.key); }).join('') + '</ul></section>';
       }).join('');
     } else {
       body = allCats().map(function (c) { return { c: c, items: list.filter(function (i) { return i.catId === c.id; }) }; })
         .filter(function (g) { return g.items.length; })
         .map(function (g) {
-          return '<section class="up-group"><h3 class="up-h cat sw-' + g.c.color + '">' + catIcon(g.c, 'cicon sm') + esc(g.c.name) + '</h3><ul class="items">' + g.items.map(function (i) { return upRow(i, 'category', ''); }).join('') + '</ul></section>';
+          return '<section class="up-group compact"><h3 class="up-h cat sw-' + g.c.color + '">' + catIcon(g.c, 'cicon sm') + esc(g.c.name) + '</h3><ul class="items compact">' + g.items.map(function (i) { return upRow(i, 'category', ''); }).join('') + '</ul></section>';
         }).join('');
     }
     return controls + body;
@@ -226,13 +226,13 @@
         groups[idx[b.key]].items.push(e);
       });
       body = groups.map(function (g) {
-        return '<section class="up-group"><h3 class="up-h">' + esc(g.label) + '</h3><ul class="items">' + g.items.map(function (e) { return tadaRow(e, 'date', g.key); }).join('') + '</ul></section>';
+        return '<section class="up-group compact"><h3 class="up-h">' + esc(g.label) + '</h3><ul class="items compact">' + g.items.map(function (e) { return tadaRow(e, 'date', g.key); }).join('') + '</ul></section>';
       }).join('');
     } else {
       body = allCats().map(function (c) { return { c: c, items: list.filter(function (e) { return e.catId === c.id; }) }; })
         .filter(function (g) { return g.items.length; })
         .map(function (g) {
-          return '<section class="up-group"><h3 class="up-h cat sw-' + g.c.color + '">' + catIcon(g.c, 'cicon sm') + esc(g.c.name) + '<span class="count">' + g.items.length + '</span></h3><ul class="items">' + g.items.map(function (e) { return tadaRow(e, 'category', ''); }).join('') + '</ul></section>';
+          return '<section class="up-group compact"><h3 class="up-h cat sw-' + g.c.color + '">' + catIcon(g.c, 'cicon sm') + esc(g.c.name) + '<span class="count">' + g.items.length + '</span></h3><ul class="items compact">' + g.items.map(function (e) { return tadaRow(e, 'category', ''); }).join('') + '</ul></section>';
         }).join('');
     }
     return controls + body;
