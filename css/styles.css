@@ -277,6 +277,7 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .drag-src{opacity:.3}
 body.dragging{cursor:grabbing;-webkit-user-select:none;user-select:none}
 .sec-title{margin:22px 0 2px;font:600 17px var(--font-display);color:var(--t-fg)}
+.ov-body>.sec-title:first-child{margin-top:4px}
 .sec-hint{margin:0 0 10px;font-size:12.5px;color:var(--muted)}
 .switch-row{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:14px}
 .switch{position:relative;width:46px;height:28px;flex:none}

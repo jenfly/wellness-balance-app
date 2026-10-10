@@ -437,7 +437,7 @@
     var html = '<div class="overlay sw-' + c.color + '" role="dialog" aria-modal="true" aria-label="' + esc(c.name) + '">' +
       '<div class="ov-head"><div class="in"><button class="icon-btn" data-action="close-overlay" aria-label="Back to tiles">' + icon('left') + '</button><h2>' + catIcon(c) + '<span>' + esc(c.name) + '</span></h2>' +
       '</div>' + (state.tags.length ? '<div class="in">' + tagChipsHTML() + '</div>' : '') + '</div>' +
-      '<div class="ov-body">' + top + '<ul class="items">' + main.map(rowHTML).join('') + '</ul>' +
+      '<div class="ov-body">' + top + (main.length ? '<h3 class="sec-title">Up next</h3><ul class="items">' + main.map(rowHTML).join('') + '</ul>' : '') +
       (less.length ? '<h3 class="sec-title">Less frequent</h3><p class="sec-hint">Repeats every 2 months or less often.</p><ul class="items">' + less.map(rowHTML).join('') + '</ul>' : '') +
       (later.length ? '<h3 class="sec-title">For later</h3><ul class="items">' + later.map(rowHTML).join('') + '</ul>' : '') +
       (!open.length ? '<p class="hint">' + (ui.tag ? 'Nothing with this tag' : 'Nothing open here. Tap + to add something.') + '</p>' : '') +
