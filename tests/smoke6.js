@@ -31,6 +31,17 @@ click('[data-action=undo]');assert(d.querySelector('.done-bar'));
 click('[data-action=clear-done]');click('[data-action=close-overlay]');
 // history survives clearing
 click('[data-tab=tada]');assert([...d.querySelectorAll('.row-text')].some(x=>x.textContent==='Return the borrowed ladder'));
+// delete a Ta-da entry, with undo
+{
+  const before=d.querySelectorAll('.tada-row').length;
+  const row=[...d.querySelectorAll('.tada-row')].find(r=>r.querySelector('.row-text').textContent==='Return the borrowed ladder');
+  row.querySelector('[data-action=tada-delete]').dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
+  assert.strictEqual(d.querySelectorAll('.tada-row').length,before-1);
+  assert(![...d.querySelectorAll('.row-text')].some(x=>x.textContent==='Return the borrowed ladder'));
+  click('[data-action=undo]');
+  assert.strictEqual(d.querySelectorAll('.tada-row').length,before);
+  assert([...d.querySelectorAll('.row-text')].some(x=>x.textContent==='Return the borrowed ladder'));
+}
 // settings housekeeping
 click('[data-action=settings]');assert(d.querySelector('#s-donekeep').value==='30'&&d.querySelector('#s-logkeep').value==='365');
 chg('#s-logkeep',e=>e.value='0');

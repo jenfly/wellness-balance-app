@@ -197,7 +197,8 @@
     if (entryIsRecurring(state, e)) meta += '<span class="kind">' + icon('repeat') + 'Recurring</span>';
     if (mode === 'category' || (bucketKey !== 'today' && bucketKey !== 'yesterday')) meta += '<span class="due">' + esc(fmtPast(day)) + '</span>';
     if (mode === 'date') meta += '<span class="catlabel"><i></i>' + esc(c.name) + '</span>';
-    return '<li class="row sw-' + c.color + '"><span class="done-mark">' + icon('check') + '</span><div class="row-main static"><span class="row-text">' + esc(e.text) + '</span>' + (meta ? '<span class="row-meta">' + meta + '</span>' : '') + '</div></li>';
+    return '<li class="row tada-row sw-' + c.color + '"><div class="row-track"><div class="row-content"><span class="done-mark">' + icon('check') + '</span><div class="row-main static"><span class="row-text">' + esc(e.text) + '</span>' + (meta ? '<span class="row-meta">' + meta + '</span>' : '') + '</div></div>' +
+      '<button class="row-delete" data-action="tada-delete" data-id="' + e.id + '" aria-label="Remove: ' + esc(e.text) + '">' + icon('trash') + '</button></div></li>';
   }
   function tadaView() {
     var days = state.settings.tadaDays || 7, rec = state.settings.tadaRecurring !== false, mode = state.settings.tadaGroup === 'date' ? 'date' : 'category';
@@ -731,6 +732,7 @@
       case 'item-edit': ui.formFor = id; ui.dateFor = null; renderOverlay(); var f1 = $('#overlay-root #f-text'); if (f1) f1.focus(); break;
       case 'item-add': ui.formFor = 'new'; ui.dateFor = null; renderOverlay(); var f2 = $('#overlay-root #f-text'); if (f2) f2.focus(); break;
       case 'item-delete': takeSnapshot(); state.items = state.items.filter(function (x) { return x.id !== id; }); ui.formFor = null; save(); renderAll(); toast('Deleted', true); break;
+      case 'tada-delete': takeSnapshot(); state.log = state.log.filter(function (x) { return x.id !== id; }); save(); renderMain(); toast('Removed from Ta-da', true); break;
       case 'due-clear': { var dueInput = t.closest('form').querySelector('#f-due'); dueInput.value = ''; dueInput.focus(); break; }
       case 'form-cancel': if (t.closest('.sheet')) ui.sheet = null; else ui.formFor = null; renderAll(); break;
       case 'toggle-reorder': ui.reorder = !ui.reorder; renderOverlay(); break;
@@ -932,14 +934,14 @@
   document.addEventListener('contextmenu', function (e) { if (drag) e.preventDefault(); });
   document.addEventListener('click', function (e) { if (justDragged) { e.stopPropagation(); e.preventDefault(); } }, true);
 
-  /* ---------- Swipe to delete (expanded tile view) ----------
+  /* ---------- Swipe to delete (expanded tile view and Ta-da) ----------
      A horizontal drag on a row slides it left to reveal a delete button; vertical
      movement is left alone so it falls through to scrolling or the item's own
      long-press reorder drag above. Runs in the capture phase so it can cancel a
      pending reorder before that listener sees the same pointermove. */
   var SWIPE_W = 72, swipeOpen = null, swp = null;
   function swipeHit(target) {
-    if (!ui.openCat || ui.formFor || !target.closest) return null;
+    if (!(ui.openCat || ui.tab === 'tada') || ui.formFor || !target.closest) return null;
     if (target.closest('input,select,textarea,[data-grip],[data-action="item-toggle"]')) return null;
     var row = target.closest('li.row');
     if (!row) return null;
