@@ -496,16 +496,21 @@
   function renderAll() { renderMain(); renderOverlay(); renderSheet(); }
 
   /* ---------- Back-button navigation ----------
-     Push one history entry per open overlay/form/sheet layer so the phone's
-     hardware/gesture back button closes a layer instead of exiting the app.
-     closeNavLayersTo() is idempotent so it's safe to run after both a real
-     popstate (hardware back) and our own history.go() (an in-app close). */
-  function navLayers() { return (ui.openCat ? 1 : 0) + (ui.formFor ? 1 : 0) + (ui.sheet ? 1 : 0); }
+     Push one history entry per open overlay/form/sheet layer, and one more
+     for being away from the Home tab, so the phone's hardware/gesture back
+     button unwinds one step at a time instead of exiting the app. Switching
+     directly between two non-Home tabs doesn't add a step of its own (there's
+     only one "away from Home" level) — back from any tab returns to Home,
+     matching the usual Android bottom-nav convention. closeNavLayersTo() is
+     idempotent so it's safe to run after both a real popstate (hardware back)
+     and our own history.go() (an in-app close/tab switch). */
+  function navLayers() { return (ui.tab !== 'tiles' ? 1 : 0) + (ui.openCat ? 1 : 0) + (ui.formFor ? 1 : 0) + (ui.sheet ? 1 : 0); }
   function closeNavLayersTo(target) {
     while (navLayers() > target) {
       if (ui.sheet) { ui.sheet = null; ui.restoreOffer = null; ui.driveStatus = null; }
       else if (ui.formFor) { ui.formFor = null; }
       else if (ui.openCat) { ui.openCat = null; ui.dateFor = null; }
+      else if (ui.tab !== 'tiles') { ui.tab = 'tiles'; }
       else break;
     }
   }
@@ -515,9 +520,9 @@
     else if (want < have) { history.go(want - have); }
   }
   window.addEventListener('popstate', function (e) {
-    var before = navLayers();
+    var before = navLayers(), beforeTab = ui.tab;
     closeNavLayersTo((e.state && e.state.wtDepth) || 0);
-    if (navLayers() !== before) renderAll();
+    if (navLayers() !== before) { renderAll(); if (ui.tab !== beforeTab) window.scrollTo(0, 0); }
   });
 
   /* ---------- Toast and undo ---------- */
