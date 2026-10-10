@@ -244,17 +244,6 @@
   }
   /* ---------- Check-in view ---------- */
   var CI_HISTORY_WINDOWS = [[30, '1 month'], [90, '3 months'], [180, '6 months'], [365, '1 year']];
-  function ciPrompts() {
-    var g = ratingGroups(state);
-    var lowName = g.low.length ? g.low[0].name : null, highName = g.high.length ? g.high[0].name : null;
-    return [
-      (lowName ? lowName + ' has felt low.' : 'Think of an area that feels hard to start.') + ' What is the smallest first step, something that would take about five minutes?',
-      'Which area gave you energy this week? What made it easy to begin?',
-      highName ? highName + ' is taking a lot of attention. What could make room for something else this week?' : 'Is one area taking most of your attention? What could make room for another?',
-      'What would "good enough" look like for the areas you have been neglecting?',
-      'Which low-friction task could you do first today to build momentum?'
-    ];
-  }
   function ciSummaryInner() {
     var g = ratingGroups(state), r = state.checkin.ratings;
     var rated = state.cats.filter(function (c) { return r[c.id] != null; }).length;
@@ -328,13 +317,12 @@
     var actions = edit
       ? '<button class="icon-btn" data-action="ci-cancel" aria-label="Cancel changes">' + icon('x') + '</button><button class="icon-btn ci-save" data-action="ci-finish" aria-label="Save check-in">' + icon('check') + '</button>'
       : '<button class="btn" data-action="ci-edit">' + icon('pencil') + ' Edit</button>';
-    var prompts = ciPrompts(), p = prompts[(ui.promptIdx || 0) % prompts.length];
     return '<div class="ci-head"><p class="summary">' + last + '</p><div class="ci-actions">' + actions + '</div></div>' +
       (edit ? '<p class="hint ci-hint">Drag the sliders, then tap the check mark to save.</p>' : '') +
       '<div class="ci-legend" aria-hidden="true"><span></span><div><span>Neglected</span><span>Balanced</span><span>Over-<br>focused</span></div></div>' +
       '<div id="ci-current" class="ci-list' + (edit ? ' editing' : '') + '">' + state.cats.map(function (c) { return ciRow(c, edit); }).join('') + '</div>' +
       '<div id="ci-summary" class="card ci-summary">' + ciSummaryInner() + '</div>' +
-      '<div class="card reflect"><h3 class="up-h" style="margin-top:0">Reflect</h3><p class="prompt">' + esc(p) + '</p><button class="btn flat" data-action="ci-prompt">Another prompt</button>' +
+      '<div class="card reflect"><h3 class="up-h" style="margin-top:0">Reflect</h3>' +
       '<label class="fld"><span>Notes</span><textarea id="ci-notes" rows="3" placeholder="Jot down anything that comes up.">' + esc(ci.notes || '') + '</textarea></label></div>' +
       checkinHistorySection();
   }
@@ -832,7 +820,6 @@
         if (cleared) { save(); renderAll(); toast('Cleared ' + plural(cleared, 'done item') + '. They stay in your Ta-da history.', true); }
         break;
       }
-      case 'ci-prompt': ui.promptIdx = (ui.promptIdx || 0) + 1; renderMain(); break;
       case 'ci-edit': ui.ciEdit = true; ui.ciDraft = JSON.stringify(state.checkin.ratings); renderMain(); break;
       case 'ci-cancel': if (ui.ciDraft) state.checkin.ratings = JSON.parse(ui.ciDraft); ui.ciEdit = false; ui.ciDraft = null; save(); renderMain(); break;
       case 'ci-finish': saveCheckin(state); ui.ciEdit = false; ui.ciDraft = null; save(); renderMain(); toast('Check-in saved', false); break;

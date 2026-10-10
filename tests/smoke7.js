@@ -36,9 +36,9 @@ assert(d.querySelector('.ci-row .ci-track').getAttribute('style').includes('--v:
 // leaving the tab mid-edit exits edit mode, keeps the ratings
 click('[data-action=ci-edit]');click('[data-tab=upcoming]');click('[data-tab=checkin]');
 assert.strictEqual(d.querySelectorAll('.ci-range').length,0);
-// prompts + notes
-const p0=d.querySelector('.prompt').textContent;click('[data-action=ci-prompt]');assert.notStrictEqual(d.querySelector('.prompt').textContent,p0);
-chg('#ci-notes',e=>e.value='walk first');click('[data-action=ci-prompt]');assert.strictEqual(d.querySelector('#ci-notes').value,'walk first');
+// notes
+assert.strictEqual(d.querySelectorAll('.prompt').length,0);
+chg('#ci-notes',e=>e.value='walk first');assert.strictEqual(d.querySelector('#ci-notes').value,'walk first');
 // new category shows as not set; tapping it in edit mode sets balanced
 click('[data-tab=tiles]');click('[data-action=toggle-edit]');click('[data-action=cat-add]');click('[data-action=toggle-edit]');
 click('[data-tab=checkin]');let rows=d.querySelectorAll('#ci-current .ci-row');assert(rows[rows.length-1].querySelector('.ci-unset'));

@@ -94,7 +94,7 @@ Single JSON blob in `localStorage` under key `well-tended-v1`, written by `save(
 **Check-in**
 - Subjective weekly snapshot, one compact row per category: name + small diverging slider (0 neglected, 50 balanced, 100 over-focused). Not timestamped per category; only `checkin.at` is stored.
 - Read mode shows meters; sliders only move in edit mode (pencil to enter, check mark to finish and set `at = now`, X to cancel and restore). This prevents accidental drags.
-- Summary card lists "On the low side" and "On the high side". A reflection card has rotating prompts (including a "shrink this task" prompt) and a notes textarea.
+- Summary card lists "On the low side" and "On the high side". A reflection card holds just a notes textarea (no prompts).
 - Check-in tab shows a dot once days since the last check-in reaches `settings.checkinDotDays` (default 7, configurable). The view shows how long since the last one.
 - No per-item friction field, by decision — friction stays a reflective prompt only. No mid-week save: ratings save with the check mark only.
 - Finishing a check-in (the check mark) also appends a frozen snapshot `{ id, at, ratings, notes }` to `checkinHistory` via `saveCheckin()` — the live `checkin.ratings`/`checkin.notes` are never cleared by this, so the next check-in starts from what was last saved, by decision. A "History" section below the current check-in (divider + heading, never a separate tab or sheet) shows: a date-range toggle (`settings.ciHistoryDays`, 1/3/6/12 months, default 3 months), a per-category sparkline over that range, and a picker to select and review (read-only) any past snapshot's ratings and notes. History is never purged and isn't cleaned up when a category is deleted — old entries just stop rendering a row for it.
