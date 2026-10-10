@@ -105,7 +105,8 @@
     var shown = list.slice(0, 3), more = (ui.tag ? list.length : all.length) - shown.length, inner;
     if (shown.length) inner = '<ul class="peek">' + shown.map(peekRow).join('') + '</ul>' + (more > 0 ? '<p class="more">+' + more + ' more</p>' : '');
     else inner = '<p class="empty">' + (ui.tag ? 'Nothing with this tag' : all.length ? 'Nothing due soon' : 'Tap to add something') + '</p>';
-    return '<div class="tile sw-' + c.color + (wide ? ' wide' : '') + '"' + (c.id !== 'inbox' ? ' data-sort="tile"' : '') + ' role="button" tabindex="0" data-action="open-cat" data-id="' + c.id + '" aria-label="Open ' + esc(c.name) + '"><h2>' + catIcon(c) + '<span>' + esc(c.name) + '</span></h2>' + inner + '</div>';
+    var faded = ui.tag && !shown.length;
+    return '<div class="tile sw-' + c.color + (wide ? ' wide' : '') + (faded ? ' tag-empty' : '') + '"' + (c.id !== 'inbox' ? ' data-sort="tile"' : '') + ' role="button" tabindex="0" data-action="open-cat" data-id="' + c.id + '" aria-label="Open ' + esc(c.name) + '"><h2>' + catIcon(c) + '<span>' + esc(c.name) + '</span></h2>' + inner + '</div>';
   }
   function notesSectionHTML() {
     return '<div class="card notes-card"><div class="notes-head"><h2>Notes</h2><div class="notes-toolbar">' +
