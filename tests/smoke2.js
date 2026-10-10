@@ -42,6 +42,6 @@ const gp=d.querySelectorAll('li.row[data-sort=item] .grip')[1];
 gp.dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true,cancelable:true}));
 console.log(rows());
 // square checkbox css
-assert(fs.readFileSync('balance-tiles.html','utf8').includes('.chk::before{content:"";grid-area:1/1;width:22px;height:22px;border-radius:6px'));
+assert(fs.readFileSync('balance-tiles.html','utf8').includes('.chk::before{content:"";grid-area:1/1;width:19px;height:19px;border-radius:5px'));
 console.log('smoke2 ok',errs);
 })().catch(e=>{console.error(e);process.exit(1)});

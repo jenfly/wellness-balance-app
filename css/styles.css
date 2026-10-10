@@ -171,9 +171,9 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .tada-row .row-content{display:flex;align-items:flex-start;gap:2px}
 .row-top{display:flex;align-items:flex-start;gap:2px}
 .chk{width:40px;height:40px;flex:none;border:0;background:none;display:grid;place-items:center;padding:0}
-.chk::before{content:"";grid-area:1/1;width:22px;height:22px;border-radius:6px;border:2px solid var(--t-dot)}
+.chk::before{content:"";grid-area:1/1;width:19px;height:19px;border-radius:5px;border:1.8px solid var(--t-dot)}
 .chk.on::before{background:var(--t-dot)}
-.chk svg.i{grid-area:1/1;width:14px;height:14px;stroke:var(--surface);stroke-width:3}
+.chk svg.i{grid-area:1/1;width:12px;height:12px;stroke:var(--surface);stroke-width:3}
 .lead-dot{width:40px;height:40px;flex:none;display:grid;place-items:center}
 .lead-dot::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--t-dot)}
 .lead-dot.flag{color:var(--t-dot)}
