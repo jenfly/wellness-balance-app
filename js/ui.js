@@ -153,7 +153,7 @@
   function upRow(i, mode, bucketKey) {
     var c = catOf(i.catId) || INBOX, meta = '';
     if (i.type === 'recurring' && i.freq) meta += '<span class="kind">' + icon('repeat') + 'every ' + esc(freqText(i.freq)) + '</span>';
-    if (mode === 'category' || (bucketKey !== 'today' && bucketKey !== 'tomorrow')) meta += '<span class="due">' + esc(fmtDue(i.due)) + '</span>';
+    if (mode === 'category' || (bucketKey !== 'today' && bucketKey !== 'tomorrow' && bucketKey.indexOf('d') !== 0)) meta += '<span class="due">' + esc(fmtDue(i.due)) + '</span>';
     if (mode === 'date') meta += '<span class="catlabel"><i></i>' + esc(c.name) + '</span>';
     meta += i.tags.map(tagBadge).join('');
     return '<li class="row sw-' + c.color + '"><button class="chk" data-action="item-toggle" data-id="' + i.id + '" aria-label="Mark done: ' + esc(i.text) + '"></button>' +

@@ -41,7 +41,8 @@ assert.deepStrictEqual(up.map(i=>i.text),['Book bike tune-up','Sort the garage s
 const upr=L.upcomingItems(s2,{recurring:true});assert.strictEqual(upr[0].text,'Take out recycling');assert(upr.length>up.length);
 assert.strictEqual(L.dateBucket(L.addDays(L.today(),-3)).label,'Earlier');
 assert.strictEqual(L.dateBucket(L.today()).label,'Today');assert.strictEqual(L.dateBucket(L.addDays(L.today(),1)).label,'Tomorrow');
-assert.strictEqual(L.dateBucket(L.addDays(L.today(),5)).label,'Next 7 days');
+const due5=L.addDays(L.today(),5),d5=new Date();d5.setDate(d5.getDate()+5);
+assert.deepStrictEqual(L.dateBucket(due5),{key:'d'+due5,label:d5.toLocaleDateString('en-CA',{weekday:'long'})});
 console.log(L.dateBucket(L.addDays(L.today(),10)).label,'|',L.dateBucket(L.addDays(L.today(),25)).label);
 console.log('upcoming ok');
 // ta-da
