@@ -811,7 +811,16 @@
       case 'item-down': if (moveItem(state, id, 1)) { save(); renderAll(); } break;
       case 'up-open':
         it = state.items.find(function (x) { return x.id === id; });
-        if (it) { ui.openCat = it.catId; ui.formFor = it.id; ui.reorder = false; ui.showDone = false; renderAll(); var f4 = $('#overlay-root #f-text'); if (f4) f4.focus(); }
+        if (it) {
+          ui.openCat = it.catId; ui.formFor = it.id; ui.reorder = false; ui.showDone = false;
+          if (it.later || (isTucked(it) && !it.pinned)) {
+            state.collapse = state.collapse || {};
+            var ccOpen = state.collapse[it.catId] = state.collapse[it.catId] || {};
+            if (it.later) ccOpen.later = true; else ccOpen.less = true;
+            save();
+          }
+          renderAll(); var f4 = $('#overlay-root #f-text'); if (f4) f4.focus();
+        }
         break;
       case 'item-edit': ui.formFor = id; ui.dateFor = null; renderOverlay(); var f1 = $('#overlay-root #f-text'); if (f1) f1.focus(); break;
       case 'item-add': ui.formFor = 'new'; ui.dateFor = null; renderOverlay(); var f2 = $('#overlay-root #f-text'); if (f2) f2.focus(); break;
