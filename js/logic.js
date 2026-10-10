@@ -59,7 +59,10 @@ function slotSort(list) {
 }
 function openSorted(state, catId) {
   const open = state.items.filter((i) => i.catId === catId && !i.done);
-  return slotSort(open.filter((i) => i.pinned)).concat(slotSort(open.filter((i) => !i.pinned)));
+  const pinned = open.filter((i) => i.pinned);
+  const later = open.filter((i) => !i.pinned && i.later);
+  const rest = open.filter((i) => !i.pinned && !i.later);
+  return slotSort(pinned).concat(slotSort(rest)).concat(slotSort(later));
 }
 function doneItems(state, catId) {
   return state.items.filter((i) => i.catId === catId && i.done).sort((a, b) => b.doneAt - a.doneAt);
@@ -88,14 +91,20 @@ function completeItem(state, id, now) {
   }
   return null;
 }
+// Which bottom-sheet section an open item sits in, for grouping neighbours during a move.
+function itemSection(i) {
+  if (i.pinned) return 'pinned';
+  if (i.later) return 'later';
+  return isTucked(i) ? 'tucked' : 'main';
+}
 function moveItem(state, id, dir) {
   const it = state.items.find((i) => i.id === id);
   if (!it) return false;
   const pinned = openSorted(state, it.catId).filter((i) => i.pinned);
   const rest = openSorted(state, it.catId).filter((i) => !i.pinned);
   const arr = it.pinned ? pinned : rest;
-  // neighbours only count within the same section (regular vs "less frequent")
-  const sameSection = (i) => it.pinned || isTucked(i) === isTucked(it);
+  // neighbours only count within the same section (pinned / regular / "less frequent" / "for later")
+  const sameSection = (i) => itemSection(i) === itemSection(it);
   const group = arr.filter(sameSection);
   const gi = group.findIndex((i) => i.id === id), gj = gi + dir;
   if (gi < 0 || gj < 0 || gj >= group.length) return false;
@@ -209,7 +218,7 @@ function emptyState() {
   const t = today();
   let n = 0;
   const it = (catId, type, text, o) => Object.assign({
-    id: uid('i'), catId, type, text, desc: '', due: null, freq: null, pinned: false,
+    id: uid('i'), catId, type, text, desc: '', due: null, freq: null, pinned: false, later: false,
     done: false, doneAt: null, manual: false, tags: [], order: n++
   }, o || {});
   return {

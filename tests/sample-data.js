@@ -11,7 +11,7 @@ function seed() {
   ].map((c) => ({ id: c[0], name: c[1], color: c[2], icon: ({fitness:'dumbbell',cooking:'utensils',housework:'sparkle',garden:'leaf',shopping:'bag',career:'briefcase',calm:'moon',friends:'people',paperwork:'file',hobbies:'book'})[c[0]] }));
   let n = 0;
   const it = (catId, type, text, o) => Object.assign({
-    id: uid('i'), catId, type, text, desc: '', due: null, freq: null, pinned: false,
+    id: uid('i'), catId, type, text, desc: '', due: null, freq: null, pinned: false, later: false,
     done: false, doneAt: null, manual: false, tags: [], order: n++
   }, o || {});
   const wk = (k) => ({ n: k, unit: 'week' });

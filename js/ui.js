@@ -23,7 +23,8 @@
     trash: '<path d="M4 7h16M9 7V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V7M6 7l1 13a2 2 0 0 0 2 1.8h6a2 2 0 0 0 2-1.8l1-13M10 11v6M14 11v6"/>',
     list: '<g fill="currentColor" stroke="none"><circle cx="4" cy="6" r="1.5"/><circle cx="4" cy="12" r="1.5"/><circle cx="4" cy="18" r="1.5"/></g><path d="M9 6h11M9 12h11M9 18h11"/>',
     indent: '<path d="M10 6h11M10 12h11M10 18h11M3 9l4 3-4 3"/>',
-    outdent: '<path d="M10 6h11M10 12h11M10 18h11M7 9l-4 3 4 3"/>'
+    outdent: '<path d="M10 6h11M10 12h11M10 18h11M7 9l-4 3 4 3"/>',
+    clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3.5 2"/>'
   };
   var CAT_ICONS = {
     dumbbell: '<path d="M6.5 6.5v11M17.5 6.5v11M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/>',
@@ -61,6 +62,7 @@
     s.notes = (s.notes && typeof s.notes.html === 'string') ? s.notes : { html: '', updatedAt: null };
     delete s.settings.notify; delete s.settings.day; delete s.settings.time;
     s.cats.forEach(function (c) { if (c.icon === undefined) c.icon = null; });
+    s.items.forEach(function (i) { if (i.later === undefined) i.later = false; });
     return s;
   }
   function load() {
@@ -101,7 +103,7 @@
   function tile(c, wide) {
     var all = openSorted(state, c.id), list;
     if (ui.tag) list = all.filter(function (i) { return i.tags.indexOf(ui.tag) >= 0; });
-    else list = all.filter(function (i) { return !isTucked(i) || i.pinned; });
+    else list = all.filter(function (i) { return !i.later && (!isTucked(i) || i.pinned); });
     var shown = list.slice(0, 3), more = list.length - shown.length, inner;
     if (shown.length) inner = '<ul class="peek">' + shown.map(peekRow).join('') + '</ul>' + (more > 0 ? '<p class="more">+' + more + ' more</p>' : '');
     else inner = '<p class="empty">' + (ui.tag ? 'Nothing with this tag' : all.length ? 'Nothing due soon' : 'Tap to add something') + '</p>';
@@ -320,7 +322,7 @@
 
   /* ---------- Item form (shared by inline edit/add and quick-add) ---------- */
   function formHTML(item, defCat) {
-    var it = item || { type: 'todo', text: '', desc: '', due: '', freq: { n: 1, unit: 'week' }, pinned: false, tags: [], catId: defCat };
+    var it = item || { type: 'todo', text: '', desc: '', due: '', freq: { n: 1, unit: 'week' }, pinned: false, later: false, tags: [], catId: defCat };
     var f = it.freq || { n: 1, unit: 'week' };
     var typeSeg = Object.keys(TYPES).map(function (k) { return '<label><input type="radio" name="f-type" value="' + k + '"' + (k === it.type ? ' checked' : '') + '><span>' + TYPES[k] + '</span></label>'; }).join('');
     var cats = allCats().map(function (c) { return '<option value="' + c.id + '"' + (c.id === it.catId ? ' selected' : '') + '>' + esc(c.name) + '</option>'; }).join('');
@@ -334,7 +336,10 @@
       '<div class="fld" data-for="recurring"><span>Repeats every</span><div class="inline"><input id="f-n" type="number" min="1" max="99" value="' + f.n + '" aria-label="Repeat interval"><select id="f-unit" aria-label="Repeat unit">' + units + '</select></div></div>' +
       '<label class="fld"><span>Category</span><select id="f-cat">' + cats + '</select></label>' +
       '<div class="fld"><span>Tags</span><div class="chips">' + tagChips + '</div><input id="f-newtag" type="text" placeholder="New tag (comma separated)" maxlength="60"></div>' +
-      '<label class="check"><input type="checkbox" id="f-pin"' + (it.pinned ? ' checked' : '') + '> Pin to the top of the tile</label>' +
+      '<div class="check-row">' +
+      '<label class="check"><input type="checkbox" id="f-pin"' + (it.pinned ? ' checked' : '') + '> Pin to top</label>' +
+      '<label class="check"><input type="checkbox" id="f-later"' + (it.later ? ' checked' : '') + '> For later</label>' +
+      '</div>' +
       '<div class="form-actions"><button type="submit" class="btn primary">' + (item ? 'Save' : 'Add') + '</button><button type="button" class="btn flat" data-action="form-cancel">Cancel</button>' +
       (item ? '<button type="button" class="btn flat danger push" data-action="item-delete" data-id="' + item.id + '">Delete</button>' : '') + '</div></form>';
   }
@@ -361,7 +366,7 @@
       freq = { n: n, unit: g('f-unit').value };
       if (!due) due = addFreq(today(), n, freq.unit);
     }
-    return { type: type, text: text, desc: g('f-desc').value.trim(), due: due, freq: freq, pinned: g('f-pin').checked, tags: tags, catId: g('f-cat').value };
+    return { type: type, text: text, desc: g('f-desc').value.trim(), due: due, freq: freq, pinned: g('f-pin').checked, later: g('f-later').checked, tags: tags, catId: g('f-cat').value };
   }
   function saveForm(form) {
     var v = readForm(form);
@@ -404,12 +409,15 @@
     if (i.type === 'recurring' && i.freq) meta += '<span class="kind">' + icon('repeat') + 'every ' + esc(freqText(i.freq)) + '</span>';
     if (i.due && !i.done) meta += '<span class="due">' + esc(fmtDue(i.due)) + '</span>';
     meta += i.tags.map(tagBadge).join('');
-    var main = '<button class="row-main" data-action="item-edit" data-id="' + i.id + '"><span class="row-text">' + esc(i.text) + '</span>' + (i.desc ? '<span class="row-desc">' + esc(i.desc) + '</span>' : '') + (meta ? '<span class="row-meta">' + meta + '</span>' : '') + '</button>';
+    var title = '<button class="row-title" data-action="item-edit" data-id="' + i.id + '"><span class="row-text">' + esc(i.text) + '</span></button>';
+    var body = (i.desc || meta) ? '<button class="row-body" data-action="item-edit" data-id="' + i.id + '">' + (i.desc ? '<span class="row-desc">' + esc(i.desc) + '</span>' : '') + (meta ? '<span class="row-meta">' + meta + '</span>' : '') + '</button>' : '';
     var ctl = '';
     if (!i.done) ctl = '<button class="icon-btn" data-action="item-pin" data-id="' + i.id + '" aria-pressed="' + i.pinned + '" aria-label="' + (i.pinned ? 'Unpin' : 'Pin') + '">' + icon('pin') + '</button>' +
+      '<button class="icon-btn" data-action="item-later" data-id="' + i.id + '" aria-pressed="' + i.later + '" aria-label="' + (i.later ? 'Remove from For later' : 'Move to For later') + '">' + icon('clock') + '</button>' +
       '<button class="grip" data-grip="item" data-id="' + i.id + '" aria-label="Reorder. Drag, or use the arrow keys.">' + icon('grip') + '</button>';
     else if (i.type === 'todo' && i.doneAt) ctl = '<button type="button" class="text-btn done-date" data-action="date-edit" data-id="' + i.id + '">' + esc(fmtPast(ds(new Date(i.doneAt)))) + '</button>';
-    return '<li class="row' + (i.done ? ' done' : '') + '"' + (i.done ? '' : ' data-sort="item" data-id="' + i.id + '" data-group="' + (i.pinned ? 'p' : 'u') + '"') + '><div class="row-track"><div class="row-content">' + lead + main + '<span class="row-ctl">' + ctl + '</span></div>' +
+    var top = '<div class="row-top">' + lead + title + '<span class="row-ctl">' + ctl + '</span></div>';
+    return '<li class="row' + (i.done ? ' done' : '') + '"' + (i.done ? '' : ' data-sort="item" data-id="' + i.id + '" data-group="' + (i.pinned ? 'p' : 'u') + '"') + '><div class="row-track"><div class="row-content">' + top + body + '</div>' +
       '<button class="row-delete" data-action="item-delete" data-id="' + i.id + '" aria-label="Delete: ' + esc(i.text) + '">' + icon('trash') + '</button></div></li>';
   }
   function renderOverlay() {
@@ -420,14 +428,16 @@
     if (!c) { ui.openCat = null; renderOverlay(); return; }
     var prev = root.querySelector('.overlay'), st = prev ? prev.scrollTop : 0;
     var open = openSorted(state, c.id), done = doneItems(state, c.id);
-    var main = open.filter(function (i) { return !isTucked(i) || i.pinned; });
-    var less = open.filter(function (i) { return isTucked(i) && !i.pinned; });
+    var main = open.filter(function (i) { return !i.later && (!isTucked(i) || i.pinned); });
+    var less = open.filter(function (i) { return !i.later && isTucked(i) && !i.pinned; });
+    var later = open.filter(function (i) { return i.later; });
     var top = '';
     var html = '<div class="overlay sw-' + c.color + '" role="dialog" aria-modal="true" aria-label="' + esc(c.name) + '">' +
       '<div class="ov-head"><div class="in"><button class="icon-btn" data-action="close-overlay" aria-label="Back to tiles">' + icon('left') + '</button><h2>' + catIcon(c) + '<span>' + esc(c.name) + '</span></h2>' +
       '</div></div>' +
       '<div class="ov-body">' + top + '<ul class="items">' + main.map(rowHTML).join('') + '</ul>' +
       (less.length ? '<h3 class="sec-title">Less frequent</h3><p class="sec-hint">Repeats every 2 months or less often.</p><ul class="items">' + less.map(rowHTML).join('') + '</ul>' : '') +
+      (later.length ? '<h3 class="sec-title">For later</h3><ul class="items">' + later.map(rowHTML).join('') + '</ul>' : '') +
       (!open.length ? '<p class="hint">Nothing open here. Tap + to add something.</p>' : '') +
       (done.length ? '<div class="done-bar"><button class="done-toggle" data-action="toggle-done" aria-expanded="' + ui.showDone + '">Done (' + done.length + ') ' + (ui.showDone ? 'hide' : 'show') + '</button><button class="text-btn" data-action="clear-done">Clear</button></div>' + (ui.showDone ? '<ul class="items">' + done.map(rowHTML).join('') + '</ul>' : '') : '') +
       '</div></div>';
@@ -710,7 +720,8 @@
         }
         break;
       }
-      case 'item-pin': it = state.items.find(function (x) { return x.id === id; }); if (it) { it.pinned = !it.pinned; save(); renderAll(); } break;
+      case 'item-pin': it = state.items.find(function (x) { return x.id === id; }); if (it) { it.pinned = !it.pinned; if (it.pinned) it.later = false; save(); renderAll(); } break;
+      case 'item-later': it = state.items.find(function (x) { return x.id === id; }); if (it) { it.later = !it.later; if (it.later) it.pinned = false; save(); renderAll(); } break;
       case 'item-up': if (moveItem(state, id, -1)) { save(); renderAll(); } break;
       case 'item-down': if (moveItem(state, id, 1)) { save(); renderAll(); } break;
       case 'up-open':
@@ -775,6 +786,8 @@
   document.addEventListener('change', function (e) {
     var t = e.target;
     if (t.name === 'f-type') applyType(t.closest('form'));
+    else if (t.id === 'f-pin' && t.checked) { var fp = t.closest('form').querySelector('#f-later'); if (fp) fp.checked = false; }
+    else if (t.id === 'f-later' && t.checked) { var fl = t.closest('form').querySelector('#f-pin'); if (fl) fl.checked = false; }
     else if (t.matches && t.matches('[data-cat-name]')) {
       var c = catOf(t.dataset.catName), v = t.value.trim();
       if (c && v) { c.name = v; save(); } else if (c) t.value = c.name;
