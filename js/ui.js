@@ -348,8 +348,10 @@
   };
   function backupBannerHTML() {
     if (!driveConfigured()) return '';
+    var remindDays = keepDays('backupReminderDays', 30);
+    if (!remindDays) return '';
     var last = lastBackupAt();
-    if (!last || daysSince(last) <= 30) return '';
+    if (!last || daysSince(last) <= remindDays) return '';
     return '<div class="banner"><p>It&rsquo;s been ' + daysSince(last) + ' days since your last backup.</p><button class="btn flat" data-action="settings">Back up now</button></div>';
   }
   function renderMain() {
@@ -518,7 +520,8 @@
     var last = lastBackupAt(), status = last ? 'Last backed up ' + agoText(last) + '.' : 'Never backed up.';
     return '<section><h4>Backup and restore</h4><p class="hint">' + esc(status) + '</p>' +
       '<div class="form-actions"><button class="btn" data-action="backup-drive"' + (ui.driveBusy ? ' disabled' : '') + '>Back up to Drive</button><button class="btn" data-action="restore-drive"' + (ui.driveBusy ? ' disabled' : '') + '>Restore</button></div>' +
-      (ui.driveStatus ? '<p class="hint">' + esc(ui.driveStatus) + '</p>' : '') + '</section>';
+      (ui.driveStatus ? '<p class="hint">' + esc(ui.driveStatus) + '</p>' : '') +
+      '<label class="fld"><span>Remind me to back up after</span><select id="s-backupdays">' + selOpts([[7, '7 days'], [14, '14 days'], [30, '30 days'], [60, '60 days'], [90, '90 days'], [0, 'Never']], keepDays('backupReminderDays', 30)) + '</select></label></section>';
   }
   function tagsSectionHTML() {
     var body = state.tags.length
@@ -940,6 +943,7 @@
     } else if (t.id === 's-logcat') { state.settings.logCat = t.value; save();
     } else if (t.id === 'log-cat') { state.settings.logCat = t.value; if (ui.sheet) { ui.sheet.catId = t.value; ui.sheet.missing = false; } save();
     } else if (t.id === 's-dotdays') { state.settings.checkinDotDays = Number(t.value); save(); updateTabDot();
+    } else if (t.id === 's-backupdays') { state.settings.backupReminderDays = Number(t.value); save(); renderMain();
     } else if (t.id === 'tada-rec') { state.settings.tadaRecurring = t.checked; save(); renderMain();
     } else if (t.name === 'tada-days') { state.settings.tadaDays = Number(t.value); save(); renderMain();
     } else if (t.name === 'tada-group') { state.settings.tadaGroup = t.value; save(); renderMain();
