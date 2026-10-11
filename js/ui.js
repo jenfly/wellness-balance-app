@@ -162,8 +162,16 @@
     if (mode === 'category' || (bucketKey !== 'today' && bucketKey !== 'tomorrow' && bucketKey.indexOf('d') !== 0)) meta += '<span class="due">' + esc(fmtDue(i.due)) + '</span>';
     if (mode === 'date') meta += '<span class="catlabel"><i></i>' + esc(c.name) + '</span>';
     meta += i.tags.map(tagBadge).join('');
-    return '<li class="row sw-' + c.color + '"><button class="chk" data-action="item-toggle" data-id="' + i.id + '" aria-label="Mark done: ' + esc(i.text) + '"></button>' +
+    return '<li class="row sw-' + c.color + '"' + (mode === 'date' ? ' data-sort="up" data-id="' + i.id + '"' : '') + '><button class="chk" data-action="item-toggle" data-id="' + i.id + '" aria-label="Mark done: ' + esc(i.text) + '"></button>' +
       '<button class="row-main" data-action="up-open" data-id="' + i.id + '"><span class="row-text">' + esc(i.text) + '</span>' + (meta ? '<span class="row-meta">' + meta + '</span>' : '') + '</button></li>';
+  }
+  // Single-day buckets (Today, Tomorrow, named weekdays within 6 days) resolve to an exact
+  // date items can be dragged onto; multi-day buckets (month groups, "Earlier") don't.
+  function bucketDropDate(key) {
+    if (key === 'today') return today();
+    if (key === 'tomorrow') return addDays(today(), 1);
+    if (key.charAt(0) === 'd') return key.slice(1);
+    return null;
   }
   function upcomingView() {
     var rec = !!state.settings.upRecurring, mode = state.settings.upGroup === 'category' ? 'category' : 'date';
@@ -179,13 +187,29 @@
       body = '<div class="placeholder"><h2>Nothing dated yet</h2><p>Give a to-do a due date and it shows up here.</p></div>';
     } else if (mode === 'date') {
       var groups = [], idx = {};
+      var overdue = list.filter(function (i) { return diffDays(i.due) < 0; });
+      if (overdue.length) {
+        var ob = dateBucket(overdue[0].due);
+        idx[ob.key] = groups.length;
+        groups.push({ key: ob.key, label: ob.label, items: overdue });
+      }
+      // Today and the next 6 days always get a slot, even with nothing due, so there's
+      // always a single-day target to drag an item onto.
+      for (var di = 0; di <= 6; di++) {
+        var db = dateBucket(addDays(today(), di));
+        idx[db.key] = groups.length;
+        groups.push({ key: db.key, label: db.label, items: [] });
+      }
       list.forEach(function (i) {
+        if (diffDays(i.due) < 0) return;
         var b = dateBucket(i.due);
         if (!(b.key in idx)) { idx[b.key] = groups.length; groups.push({ key: b.key, label: b.label, items: [] }); }
         groups[idx[b.key]].items.push(i);
       });
       body = groups.map(function (g) {
-        return '<section class="up-group compact"><h3 class="up-h">' + esc(g.label) + '</h3><ul class="items compact">' + g.items.map(function (i) { return upRow(i, 'date', g.key); }).join('') + '</ul></section>';
+        var dropDate = bucketDropDate(g.key), empty = !g.items.length;
+        return '<section class="up-group compact' + (empty ? ' empty' : '') + '"' + (dropDate ? ' data-drop-date="' + dropDate + '"' : '') + '><h3 class="up-h">' + esc(g.label) + '</h3>' +
+          (empty ? '' : '<ul class="items compact">' + g.items.map(function (i) { return upRow(i, 'date', g.key); }).join('') + '</ul>') + '</section>';
       }).join('');
     } else {
       body = allCats().map(function (c) { return { c: c, items: list.filter(function (i) { return i.catId === c.id; }) }; })
@@ -961,13 +985,19 @@
     if (f) { e.preventDefault(); saveForm(f); }
   });
 
-  /* ---------- Drag and drop (tiles and items) ----------
+  /* ---------- Drag and drop (tiles, items, and Upcoming date rows) ----------
      Grip handles drag immediately. Elsewhere: mouse drags after a small move,
-     touch drags after a half-second press. Arrow keys on a focused grip also reorder. */
+     touch drags after a half-second press. Arrow keys on a focused grip also reorder.
+     Upcoming (By date mode) is a different kind of drag: the item itself never moves,
+     dropping it on a single-day bucket (Today/Tomorrow/a named weekday) sets its due date. */
   var drag = null, justDragged = false;
   function sortCtx(target) {
     if (!target.closest || ui.sheet || ui.formFor) return null;
     if (target.closest('input,select,textarea,[data-action="item-toggle"]')) return null;
+    if (ui.tab === 'upcoming' && !ui.openCat && state.settings.upGroup !== 'category') {
+      var ur = target.closest('li.row[data-sort="up"]');
+      if (ur) return { el: ur, kind: 'up', grip: false, scroller: function () { return window; } };
+    }
     var grip = !!target.closest('[data-grip]');
     if (!ui.openCat) {
       if (ui.tab !== 'tiles') return null;
@@ -1000,7 +1030,10 @@
   function activate() {
     var d = drag;
     d.active = true;
-    d.before = dragIds(d);
+    if (d.ctx.kind === 'up') {
+      d.zones = Array.prototype.slice.call(document.querySelectorAll('.up-group[data-drop-date]'));
+      d.zones.forEach(function (z) { z.classList.add('drop-eligible'); });
+    } else d.before = dragIds(d);
     var r = d.el.getBoundingClientRect();
     d.ox = d.x - r.left; d.oy = d.y - r.top;
     var g = d.el.cloneNode(true);
@@ -1028,6 +1061,16 @@
     if (kids.indexOf(d.el) < kids.indexOf(t)) t.after(d.el); else t.before(d.el);
     d.lt = t; d.lx = d.x; d.ly = d.y;
   }
+  // The dragged item itself never moves; instead the day bucket under the pointer lights up,
+  // and dropping there (endDrag) sets the item's due date to that bucket's date.
+  function dropHover() {
+    var d = drag, under = document.elementFromPoint(d.x, d.y);
+    var zone = (under && under.closest) ? under.closest('.up-group[data-drop-date]') : null;
+    if (d.hoverZone === zone) return;
+    if (d.hoverZone) d.hoverZone.classList.remove('drop-hover');
+    if (zone) zone.classList.add('drop-hover');
+    d.hoverZone = zone;
+  }
   function tick() {
     if (!drag || !drag.active) return;
     var y = drag.y, h = window.innerHeight, sp = 0;
@@ -1035,7 +1078,8 @@
     if (sp) {
       var sc = drag.ctx.scroller();
       if (sc === window) window.scrollBy(0, sp); else if (sc) sc.scrollTop += sp;
-      moveGhost(); reorder();
+      moveGhost();
+      if (drag.ctx.kind === 'up') dropHover(); else reorder();
     }
     drag.raf = requestAnimationFrame(tick);
   }
@@ -1047,13 +1091,22 @@
     drag = null;
     if (!d.active) return;
     try { document.body.releasePointerCapture(d.pid); } catch (e) { /* ignore */ }
-    var list = dragIds(d);
     d.ghost.remove();
     d.el.classList.remove('drag-src');
     document.body.classList.remove('dragging');
     justDragged = true;
     setTimeout(function () { justDragged = false; }, 400);
-    if (!cancel && list.join() !== d.before.join()) { d.ctx.drop(list, d.el.dataset.id); save(); }
+    if (d.ctx.kind === 'up') {
+      d.zones.forEach(function (z) { z.classList.remove('drop-eligible', 'drop-hover'); });
+      if (!cancel && d.hoverZone) {
+        var newDue = d.hoverZone.dataset.dropDate;
+        var it = state.items.find(function (x) { return x.id === d.el.dataset.id; });
+        if (it && it.due !== newDue) { it.due = newDue; save(); }
+      }
+    } else {
+      var list = dragIds(d);
+      if (!cancel && list.join() !== d.before.join()) { d.ctx.drop(list, d.el.dataset.id); save(); }
+    }
     renderAll();
   }
   document.addEventListener('pointerdown', function (e) {
@@ -1074,7 +1127,8 @@
       return;
     }
     e.preventDefault();
-    moveGhost(); reorder();
+    moveGhost();
+    if (drag.ctx.kind === 'up') dropHover(); else reorder();
   });
   document.addEventListener('pointerup', function (e) { if (drag && e.pointerId === drag.pid) endDrag(false); });
   document.addEventListener('pointercancel', function (e) { if (drag && e.pointerId === drag.pid) endDrag(true); });
