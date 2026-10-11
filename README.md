@@ -43,5 +43,10 @@ Notes:
 - If you skip this setup, tapping "Back up to Drive" or "Restore" just explains it isn't configured yet, rather than failing silently.
 - Restoring replaces the entire app state on this device (after showing what's in the backup and asking you to confirm) — it doesn't merge. Right after restoring, an "Undo" option briefly appears if you want the previous state back.
 
+## Meal Planner link
+Meal Planner (a separate app on the same site) can hand a finished batch-cook item to Well Tended. Checking it off there opens this app at `?log=<meal name>`, which shows a "Log a batch" prompt for "Make <meal>". **Log it** adds it as a finished to-do (so it appears in Ta-da); **Cancel** adds nothing, for when it's the same batch showing up again.
+
+Choose where these land under Settings > "Meal Planner link". It's stored by category ID, so renaming the category is safe; if the category is deleted the prompt falls back to Inbox and says so. The page re-reads saved data whenever it regains focus, so a copy opened from Meal Planner can't be overwritten by an older background copy.
+
 ## Not built yet
 Nothing outstanding — device verification (install, offline mode, service-worker updates, touch drag-and-drop, safe-area insets) has been confirmed working on a real phone. (Real weekly push notifications were considered and dropped: no server means no reliable way to send them. The Check-in tab's in-app dot is the permanent reminder.)
