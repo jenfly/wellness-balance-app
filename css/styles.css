@@ -361,3 +361,4 @@ body.dragging{cursor:grabbing;-webkit-user-select:none;user-select:none}
 .ci-snapshot-notes p{margin:0;font-size:14px;white-space:pre-wrap}
 .btn.full{width:100%;padding:13px}
 @media (prefers-reduced-motion:no-preference){.tile,.chip,.btn{transition:transform .12s ease}.tile:active{transform:scale(.985)}}
+.log-text{margin:0;font:600 18px var(--font-display)}

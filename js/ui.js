@@ -77,9 +77,11 @@
     } catch (e) { /* storage unavailable */ }
     return emptyState();
   }
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* ignore */ } }
+  var lastRaw = null; // last string we wrote to / read from localStorage, so syncFromStorage() can spot outside changes
+  function save() { try { lastRaw = JSON.stringify(state); localStorage.setItem(KEY, lastRaw); } catch (e) { /* ignore */ } }
 
   var state = load();
+  try { lastRaw = localStorage.getItem(KEY); } catch (e) { /* storage unavailable */ }
   var ui = { tab: 'tiles', openCat: null, tag: null, editTiles: false, delAsk: null, formFor: null, dateFor: null, reorder: false, showDone: false, sheet: null, resetAsk: false, showJson: false, driveBusy: false, driveStatus: null, restoreOffer: null };
   var snapshot = null, toastTimer = null;
 
@@ -526,9 +528,34 @@
       : '<p class="hint">No tags yet &mdash; add one from an item&rsquo;s edit form.</p>';
     return '<section><h4>Tags</h4>' + body + '</section>';
   }
+  /* ---------- Meal Planner link ----------
+     Meal Planner opens this app with ?log=<meal name> when a batch-cook item is checked off.
+     We ask first (it might be the same batch showing up again), then on "Log it" add a
+     finished to-do "Make <meal>" and complete it so it lands in Ta-da. The destination is
+     stored as a category id in settings.logCat, so renaming the category is safe. */
+  function logTitle(name) {
+    var n = name.trim().slice(0, 195), c1 = n.charAt(1);
+    var keepCase = n.length > 1 && c1 !== c1.toLowerCase(); // "BBQ tofu" stays as is
+    return 'Make ' + (keepCase ? n : n.charAt(0).toLowerCase() + n.slice(1));
+  }
+  function logCatId() { return catOf(state.settings.logCat) ? state.settings.logCat : 'inbox'; }
+  function catOptions(sel) { return allCats().map(function (c) { return '<option value="' + c.id + '"' + (c.id === sel ? ' selected' : '') + '>' + esc(c.name) + '</option>'; }).join(''); }
+  function logHTML() {
+    var s = ui.sheet;
+    return '<section><p class="log-text">' + esc(s.text) + '</p>' +
+      '<label class="fld"><span>Log it in</span><select id="log-cat">' + catOptions(s.catId) + '</select></label>' +
+      (s.missing ? '<p class="hint">The category you usually log meals in no longer exists, so this is set to Inbox. Pick another and it will be remembered.</p>' : '') +
+      '<div class="form-actions"><button class="btn primary" data-action="log-confirm">Log it</button><button class="btn flat" data-action="close-sheet">Cancel</button></div>' +
+      '<p class="hint">Adds it as a finished to-do so it shows up in Ta-da. Cancel if this is the same batch you already logged.</p></section>';
+  }
+  function mealLinkSectionHTML() {
+    return '<section><h4>Meal Planner link</h4><label class="fld"><span>Log batch-cook meals in</span><select id="s-logcat">' + catOptions(logCatId()) + '</select></label>' +
+      '<p class="hint">Checking off a batch-cook item in Meal Planner offers to log &ldquo;Make &hellip;&rdquo; here. The category is remembered by ID, so renaming it is safe.</p></section>';
+  }
   function settingsHTML() {
     return backupSectionHTML() +
       tagsSectionHTML() +
+      mealLinkSectionHTML() +
       '<section><h4>Check-in reminder</h4><p class="hint">Well Tended shows a dot on the Check-in tab when it&rsquo;s been a while &mdash; no push notifications.</p>' +
       '<label class="fld"><span>Show a dot on the Check-in tab after</span><select id="s-dotdays">' + selOpts([[7, '7 days'], [10, '10 days'], [14, '14 days'], [21, '21 days'], [30, '30 days']], keepDays('checkinDotDays', 7)) + '</select></label></section>' +
       '<section><h4>Housekeeping</h4><label class="fld"><span>Remove done items from tiles after</span><select id="s-donekeep">' + selOpts([[7, '7 days'], [30, '30 days'], [90, '90 days'], [0, 'Never']], keepDays('doneKeepDays', 30)) + '</select></label>' +
@@ -540,9 +567,10 @@
   function renderSheet() {
     var root = $('#sheet-root');
     if (!ui.sheet) { root.innerHTML = ''; return; }
-    var isAdd = ui.sheet.kind === 'add';
-    root.innerHTML = '<div class="backdrop" data-action="close-sheet"></div><div class="sheet" role="dialog" aria-modal="true" aria-label="' + (isAdd ? 'Quick add' : 'Settings') + '"><div class="sheet-head"><h3>' + (isAdd ? 'Quick add' : 'Settings') + '</h3><button class="icon-btn" data-action="close-sheet" aria-label="Close">' + icon('x') + '</button></div>' +
-      (isAdd ? formHTML(null, ui.sheet.catId) : settingsHTML()) + '</div>';
+    var kind = ui.sheet.kind, isAdd = kind === 'add', isLog = kind === 'log';
+    var title = isAdd ? 'Quick add' : isLog ? 'Log a batch' : 'Settings';
+    root.innerHTML = '<div class="backdrop" data-action="close-sheet"></div><div class="sheet" role="dialog" aria-modal="true" aria-label="' + title + '"><div class="sheet-head"><h3>' + title + '</h3><button class="icon-btn" data-action="close-sheet" aria-label="Close">' + icon('x') + '</button></div>' +
+      (isAdd ? formHTML(null, ui.sheet.catId) : isLog ? logHTML() : settingsHTML()) + '</div>';
     root.querySelectorAll('form[data-form]').forEach(applyType);
     if (ui.showJson) { var t = $('#json-out'); if (t) { t.focus(); t.select(); } }
   }
@@ -848,6 +876,18 @@
       case 'fab': ui.formFor = null; ui.sheet = { kind: 'add', catId: ui.openCat || 'inbox' }; renderAll(); var f3 = $('#sheet-root #f-text'); if (f3) f3.focus(); break;
       case 'settings': ui.sheet = { kind: 'settings' }; ui.resetAsk = false; ui.showJson = false; ui.restoreOffer = null; ui.driveStatus = null; renderSheet(); break;
       case 'close-sheet': ui.sheet = null; ui.restoreOffer = null; ui.driveStatus = null; renderSheet(); break;
+      case 'log-confirm': {
+        var lsh = ui.sheet;
+        if (!lsh || lsh.kind !== 'log') break;
+        var lcat = catOf(lsh.catId) ? lsh.catId : 'inbox';
+        takeSnapshot();
+        var litem = { id: uid('i'), catId: lcat, type: 'todo', text: lsh.text, desc: '', due: null, freq: null, pinned: false, later: false, tags: [], done: false, doneAt: null, manual: false, order: nextOrder(state, lcat) };
+        state.items.push(litem);
+        completeItem(state, litem.id);
+        ui.sheet = null; save(); renderAll();
+        toast('Logged in ' + catOf(lcat).name + '. Added to your ta-da list.', true);
+        break;
+      }
       case 'tag-delete': {
         var tg = t.dataset.tag;
         takeSnapshot();
@@ -897,6 +937,8 @@
     } else if (t.id === 'ci-notes') { state.checkin.notes = t.value; save(); renderMain();
     } else if (t.name === 'ci-history-days') { state.settings.ciHistoryDays = Number(t.value); ui.ciHistorySel = null; save(); renderMain();
     } else if (t.id === 'ci-history-pick') { ui.ciHistorySel = t.value || null; renderMain();
+    } else if (t.id === 's-logcat') { state.settings.logCat = t.value; save();
+    } else if (t.id === 'log-cat') { state.settings.logCat = t.value; if (ui.sheet) { ui.sheet.catId = t.value; ui.sheet.missing = false; } save();
     } else if (t.id === 's-dotdays') { state.settings.checkinDotDays = Number(t.value); save(); updateTabDot();
     } else if (t.id === 'tada-rec') { state.settings.tadaRecurring = t.checked; save(); renderMain();
     } else if (t.name === 'tada-days') { state.settings.tadaDays = Number(t.value); save(); renderMain();
@@ -1159,6 +1201,30 @@
   $('#tabbar').innerHTML = tabs.map(function (t) { return '<button class="tab" data-action="tab" data-tab="' + t[0] + '">' + '<span class="tabicon">' + icon(t[2]) + (t[0] === 'checkin' ? '<span class="tabdot" hidden></span>' : '') + '</span><span>' + t[1] + '</span></button>'; }).join('');
   $('#fab').innerHTML = icon('plus');
   housekeeping();
-  document.addEventListener('visibilitychange', function () { if (!document.hidden && housekeeping()) renderAll(); });
+  /* Another window of this app (e.g. a browser tab opened from Meal Planner) may have saved
+     while this one sat in the background. Every change is saved immediately, so storage is the
+     source of truth: when it differs from what we last wrote or read, adopt it, so this window's
+     next save can't overwrite the other one's changes. */
+  function syncFromStorage() {
+    var raw;
+    try { raw = localStorage.getItem(KEY); } catch (e) { return false; }
+    if (!raw || raw === lastRaw) return false;
+    lastRaw = raw; state = load(); renderAll();
+    return true;
+  }
+  window.addEventListener('storage', function (e) { if (e.key === KEY) syncFromStorage(); });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && !syncFromStorage() && housekeeping()) renderAll(); });
   renderAll();
+
+  // Meal Planner link: ?log=<meal name> opens the "Log a batch" prompt, then drops the param so a reload doesn't repeat it.
+  (function () {
+    var name = null, has = false;
+    try { var qs = new URLSearchParams(location.search); has = qs.has('log'); name = qs.get('log'); } catch (e) { /* old browser */ }
+    if (!has) return;
+    try { history.replaceState(history.state, '', location.pathname + location.hash); } catch (e) { /* ignore */ }
+    if (!name || !name.trim()) return;
+    ui.tab = 'tiles'; ui.openCat = null; ui.formFor = null;
+    ui.sheet = { kind: 'log', text: logTitle(name), catId: logCatId(), missing: !!state.settings.logCat && !catOf(state.settings.logCat) };
+    renderAll(); syncNavHistory();
+  })();
 })();
