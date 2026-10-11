@@ -279,6 +279,7 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .tile:not(.edit)[data-sort],li.row{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .tile.edit input{-webkit-user-select:text;user-select:text}
 .ghost{position:fixed;margin:0;z-index:90;pointer-events:none;transform:scale(1.03);box-shadow:var(--shadow);opacity:.96;list-style:none}
+.ghost.up-ghost{opacity:.55}
 .drag-src{opacity:.3}
 body.dragging{cursor:grabbing;-webkit-user-select:none;user-select:none}
 .sec-title{margin:22px 0 2px;font:600 17px var(--font-display);color:var(--t-fg)}
@@ -308,9 +309,10 @@ body.dragging{cursor:grabbing;-webkit-user-select:none;user-select:none}
 .done-mark svg.i{width:18px;height:18px;stroke-width:2.6}
 .row-main.static{cursor:default}
 .up-h .count{margin-left:8px;font:500 13px var(--font-body);opacity:.7}
-.up-group.drop-eligible .up-h{outline:1px dashed var(--accent);outline-offset:6px;border-radius:8px}
+.up-group.empty{padding-bottom:30px}
+.up-group.drop-eligible .up-h{outline:2px dashed var(--accent);outline-offset:6px;border-radius:8px}
 .up-group.drop-hover{background:var(--chip);border-radius:12px}
-.up-group.drop-hover .up-h{outline-style:solid}
+.up-group.drop-hover .up-h{outline:none;background:var(--accent);color:var(--accent-ink);padding:4px 10px;margin:16px -10px 4px;border-radius:8px}
 .done-bar{display:flex;align-items:center;justify-content:space-between;margin-top:16px}
 .done-bar .done-toggle{margin-top:0}
 .tabicon{position:relative;display:inline-grid}

@@ -1038,6 +1038,7 @@
     d.ox = d.x - r.left; d.oy = d.y - r.top;
     var g = d.el.cloneNode(true);
     g.classList.add('ghost');
+    if (d.ctx.kind === 'up') g.classList.add('up-ghost'); // see-through so the highlighted day underneath stays legible
     g.style.width = r.width + 'px'; g.style.height = r.height + 'px';
     var cs = getComputedStyle(d.el);
     ['--t-bg', '--t-fg', '--t-dot'].forEach(function (p) { g.style.setProperty(p, cs.getPropertyValue(p)); });
