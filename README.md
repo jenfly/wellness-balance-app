@@ -9,6 +9,7 @@ A tile-based app that keeps every life area in view. Vanilla JS PWA, no build st
 - `js/ui.js`: rendering, events, drag and drop
 - `sw.js`: offline cache. **Bump `VERSION` whenever any app file changes.**
 - `manifest.webmanifest`, `icons/`: install metadata and the sprout icon
+- `tests/`: Node + jsdom test suite — see `CLAUDE.md` for how to run it
 
 ## Run locally
 `python3 -m http.server 8000`, then open http://localhost:8000 (service workers need http://localhost or https).
@@ -43,4 +44,4 @@ Notes:
 - Restoring replaces the entire app state on this device (after showing what's in the backup and asking you to confirm) — it doesn't merge. Right after restoring, an "Undo" option briefly appears if you want the previous state back.
 
 ## Not built yet
-Nothing currently — see `HANDOFF.md` for device-verification items still outstanding. (Real weekly push notifications were considered and dropped: no server means no reliable way to send them. The Check-in tab's in-app dot is the permanent reminder.)
+Nothing outstanding — device verification (install, offline mode, service-worker updates, touch drag-and-drop, safe-area insets) has been confirmed working on a real phone. (Real weekly push notifications were considered and dropped: no server means no reliable way to send them. The Check-in tab's in-app dot is the permanent reminder.)
