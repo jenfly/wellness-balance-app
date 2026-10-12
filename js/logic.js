@@ -151,10 +151,10 @@ function tadaEntries(state, opts) {
     .sort((a, b) => b.at - a.at);
 }
 // Ta-da collapsible groups: the 7-day window starts fully open; longer windows start
-// collapsed except Today/Yesterday/Past week, which always start open (by-date only).
+// collapsed except Today/Yesterday/the 5 individual preceding days, which always start open (by-date only).
 function tadaGroupDefaultOpen(days, mode, key) {
   if (days === 7) return true;
-  return mode === 'date' && (key === 'today' || key === 'yesterday' || key === 'week');
+  return mode === 'date' && (key === 'today' || key === 'yesterday' || key.charAt(0) === 'd');
 }
 // A manual toggle (state.settings.tadaCollapse[days][key] = collapsed?) always overrides the default.
 function tadaGroupOpen(state, days, mode, key) {
@@ -174,7 +174,7 @@ function pastBucket(s) {
   const n = -diffDays(s), d = parseDate(s), now = parseDate(today());
   if (n <= 0) return { key: 'today', label: 'Today' };
   if (n === 1) return { key: 'yesterday', label: 'Yesterday' };
-  if (n <= 7) return { key: 'week', label: 'Past week' };
+  if (n < 7) return { key: 'd' + s, label: d.toLocaleDateString('en-CA', { weekday: 'long' }) };
   const sameYear = d.getFullYear() === now.getFullYear();
   const sameMonth = sameYear && d.getMonth() === now.getMonth();
   const m = d.toLocaleDateString('en-CA', { month: 'long' });

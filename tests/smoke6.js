@@ -20,9 +20,11 @@ assert(![...d.querySelectorAll('.up-group .row-text')].some(x=>x.textContent.inc
 chg('#tada-rec',e=>e.checked=true);
 // by date
 chg('input[name=tada-group][value=date]',e=>e.checked=true);console.log(heads());
-assert(heads().some(x=>x.startsWith('Yesterday'))&&heads().some(x=>x.startsWith('Past week')));
+const day3=w.pastBucket(w.addDays(w.today(),-3)).label, day5=w.pastBucket(w.addDays(w.today(),-5)).label;
+assert(heads().some(x=>x.startsWith('Yesterday'))&&heads().some(x=>x.startsWith(day3))&&heads().some(x=>x.startsWith(day5)));
+assert(!heads().some(x=>x.startsWith('Past week')));
 assert(d.querySelector('.catlabel'));
-// collapsible groups: Today/Yesterday/Past week default open even at 365 days, older month groups default collapsed
+// collapsible groups: Today/Yesterday/individual preceding days default open even at 365 days, older month groups default collapsed
 {
   const grp=h=>[...d.querySelectorAll('.up-group')].find(g=>g.querySelector('.up-h').textContent.startsWith(h));
   assert.strictEqual(grp('Yesterday').querySelector('.sec-toggle').getAttribute('aria-expanded'),'true');

@@ -56,13 +56,18 @@ assert.deepStrictEqual([7,30,90,365].map(d=>cnt(d,false)),[1,3,4,5]);
 const te=L.tadaEntries(s3,{days:365,recurring:true});assert(te.every((e,i)=>i===0||te[i-1].at>=e.at));
 assert.strictEqual(L.fmtPast(L.today()),'Today');assert.strictEqual(L.fmtPast(L.addDays(L.today(),-1)),'Yesterday');
 console.log(L.fmtPast(L.addDays(L.today(),-3)),L.fmtPast(L.addDays(L.today(),-20)),L.fmtPast(L.addDays(L.today(),-300)),'|',L.pastBucket(L.addDays(L.today(),-5)).label,L.pastBucket(L.addDays(L.today(),-9)).label,L.pastBucket(L.addDays(L.today(),-40)).label,L.pastBucket(L.addDays(L.today(),-300)).label);
+// each of the 5 preceding days is its own bucket (distinct keys, no grouping into "past week")
+const dayKeys=[2,3,4,5,6].map(n=>L.pastBucket(L.addDays(L.today(),-n)).key);
+assert.strictEqual(new Set(dayKeys).size,5);
+assert(dayKeys.every(k=>k.charAt(0)==='d'));
+assert.strictEqual(L.pastBucket(L.addDays(L.today(),-7)).key.charAt(0),'m');
 // ta-da collapsible group defaults: 7-day window always open; longer windows open only
-// for today/yesterday/past week (by-date) and collapsed otherwise, until manually toggled
+// for today/yesterday/the individual preceding days (by-date) and collapsed otherwise, until manually toggled
 assert.strictEqual(L.tadaGroupDefaultOpen(7,'date','m2026-09'),true);
 assert.strictEqual(L.tadaGroupDefaultOpen(7,'category','fitness'),true);
 assert.strictEqual(L.tadaGroupDefaultOpen(30,'date','today'),true);
 assert.strictEqual(L.tadaGroupDefaultOpen(30,'date','yesterday'),true);
-assert.strictEqual(L.tadaGroupDefaultOpen(30,'date','week'),true);
+assert.strictEqual(L.tadaGroupDefaultOpen(30,'date',dayKeys[0]),true);
 assert.strictEqual(L.tadaGroupDefaultOpen(30,'date','m2026-09'),false);
 assert.strictEqual(L.tadaGroupDefaultOpen(365,'category','fitness'),false);
 const s3b=L.seed();

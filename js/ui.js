@@ -226,7 +226,7 @@
   function tadaRow(e, mode, bucketKey) {
     var c = catOf(e.catId) || INBOX, day = ds(new Date(e.at)), meta = '';
     if (entryIsRecurring(state, e)) meta += '<span class="kind">' + icon('repeat') + 'Recurring</span>';
-    if (mode === 'category' || (bucketKey !== 'today' && bucketKey !== 'yesterday')) meta += '<span class="due">' + esc(fmtPast(day)) + '</span>';
+    if (mode === 'category' || (bucketKey !== 'today' && bucketKey !== 'yesterday' && bucketKey.charAt(0) !== 'd')) meta += '<span class="due">' + esc(fmtPast(day)) + '</span>';
     if (mode === 'date') meta += '<span class="catlabel"><i></i>' + esc(c.name) + '</span>';
     return '<li class="row tada-row sw-' + c.color + '"><div class="row-track"><div class="row-content"><span class="done-mark">' + icon('check') + '</span><div class="row-main static"><span class="row-text">' + esc(e.text) + '</span>' + (meta ? '<span class="row-meta">' + meta + '</span>' : '') + '</div></div>' +
       '<button class="row-delete" data-action="tada-delete" data-id="' + e.id + '" aria-label="Remove: ' + esc(e.text) + '">' + icon('trash') + '</button></div></li>';
