@@ -1,6 +1,6 @@
 # Supabase sync: handoff to Claude Code
 
-Status: in progress (Oct 11, 2026). Pilot app is Well Tended (this repo). Once it works, the same layer gets ported to `meal-planner` and `journal-app`. Read `misc/future-sync-backup-options.md` first for the original reasoning; this file records what was decided and built since.
+Status: done (Oct 12, 2026). Pilot app was Well Tended (this repo); verified against the real Supabase project from an actual device, then ported to `meal-planner` and `journal-app`. Read `misc/future-sync-backup-options.md` first for the original reasoning; this file records what was decided and built since.
 
 ## Goal
 Replace manual Google Drive backup with automatic cross-device sync through ONE shared Supabase project used by all three apps (free tier allows only 2 projects, and there are 3 apps). Keep `localStorage` as the always-used local copy so the apps stay offline-first and instant; a background layer pushes and pulls.
@@ -63,7 +63,7 @@ alter table public.app_data enable row level security;
 - `js/logic.js`: pure `syncPlan(meta, remote, same)` (returns push-new / adopt / choose / noop / push / pull / overwrite) and `canonJSON` (key-order-independent compare, because jsonb reorders keys). Exported for Node tests.
 - `js/sync.js` (new, NOT yet loaded anywhere and NOT yet tested): `window.Sync` with `init`, `noteLocalChange`, `signIn`, `signOut`, `syncNow`, `resolveChoice`, `status`. Handles PKCE sign-in redirect (captures `?code=` synchronously at script load and strips it from the URL before `ui.js` runs, because `ui.js` rewrites the URL for the Meal Planner `?log=` link), token refresh, debounced push (2.5 s after a save), pull on startup / tab visible / back online, retry after 60 s, compare-and-swap push, edits made mid-request stay marked dirty.
 
-## What is left for this app
+## What was left for this app (all items below are done, landed in `73e1dec`)
 1. `index.html`: add `<script src="js/sync.js"></script>` between `logic.js` and `ui.js`.
 2. `sw.js`: add `js/sync.js` to `SHELL` and bump `VERSION` (currently v49). Cross-origin supabase.co requests already bypass the SW (it only handles same-origin and Google Fonts), which is what we want.
 3. `js/ui.js` wiring:
@@ -77,11 +77,11 @@ alter table public.app_data enable row level security;
 4. Tests: add `syncPlan` / `canonJSON` cases to `tests/test.js`. Add a jsdom test that loads `logic.js` + `sync.js` with a fake in-memory Supabase (mock `window.fetch` for `/auth/v1/token` and `/rest/v1/app_data` incl. PATCH with the `updated_at=eq.` filter returning `[]` on mismatch, 409 on duplicate POST) covering: first push, push after edit, pull from another device, conflict where local is newer vs older, first-link choose (both options), 401 then refresh, offline then recover, edit during an in-flight push, different user signing in.
 5. Docs: README ("Cloud sync" section), CLAUDE.md (architecture + state notes: new file, shared session key, `:sync-meta` and `:pre-sync-copy` keys, no-supabase-js rule).
 6. Visual check: this repo's CLAUDE.md requires screenshots of any UI change (settings sheet in signed-out, signed-in, syncing/offline, and choose states).
-7. Real-device test (sync.js has only been desk-checked; it was never run against the real Supabase): sign in on the phone, confirm a row appears in Table Editor > `app_data`, edit on a second browser, confirm it arrives. Watch for: PKCE `code_challenge_method=s256` being accepted, `redirect_to` matching the allow-list, the token response shape, PostgREST accepting the `updated_at=eq.<timestamptz>` filter with microseconds and `+00:00` (URL-encoded).
+7. Real-device test: **done** — signed in on the phone, confirmed a row appeared in Table Editor > `app_data`, edited on a second browser, confirmed it arrived. PKCE, redirect allow-list, token response shape, and the PostgREST `updated_at=eq.<timestamptz>` compare-and-swap all worked as designed.
 
 ## After the pilot
 - Daily keep-alive: **done** — `.github/workflows/supabase-keepalive.yml` runs a daily `GET /rest/v1/app_data?select=app&limit=1` against Supabase with the publishable key (plus `workflow_dispatch` for a manual run), so the free project never auto-pauses after a week idle.
-- Port to `meal-planner` (single blob first: its state is ~8 `mealRotation.*` localStorage keys in one 94 KB `index.html`) and `journal-app` (add a localStorage cache of the entries array first; Drive remains the existing source until migrated). One-time "claim my data" flow = the `push-new` / `choose` paths already in `syncPlan`.
+- Port to `meal-planner` and `journal-app`: **done**. `meal-planner` switched to a single state blob and added sync (`0120382 Add Supabase sync across devices, ported from Well Tended's pilot`), then dropped its Drive reminder banner/restore (`7092aee`). `journal-app` first grew a localStorage-first cache (`de1e942`), then ported `sync.js` (`1c12bef Port sync.js (Supabase sync engine) with pristine/merge handling`), wired a full settings panel (`f7345a8`), and later dropped the standalone Drive disconnect button (`b941247`). Both used the `push-new` / `choose` paths already in `syncPlan` for the one-time "claim my data" flow.
 - Meal Planner and Well Tended already talk via `?log=<meal name>`; keep that working.
 
 ## Repo conventions that apply

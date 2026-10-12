@@ -66,4 +66,4 @@ Choose where these land under Settings > "Meal Planner link". It's stored by cat
 ## Not built yet
 Device verification (install, offline mode, service-worker updates, touch drag-and-drop, safe-area insets) has been confirmed working on a real phone. (Real weekly push notifications were considered and dropped: no server means no reliable way to send them. The Check-in tab's in-app dot is the permanent reminder.)
 
-Cloud sync (above) is built and covered by the jsdom test suite against a fake Supabase, but hasn't yet been run against the real Supabase project from an actual device — that device/real-backend verification is still outstanding.
+Cloud sync (above) is built, covered by the jsdom test suite against a fake Supabase, and has since been verified against the real Supabase project from an actual device.
