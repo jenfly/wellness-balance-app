@@ -14,6 +14,30 @@ Replace manual Google Drive backup with automatic cross-device sync through ONE 
 - Keep the existing Drive backup as a safety net during the transition.
 - Pilot first: this app. Free-tier limits were just re-verified by the user.
 
+## Security: Google sign-in must stay restricted to the owner
+
+The Google OAuth client used by Supabase Auth (see below) **must stay in Google
+Cloud Console's "Testing" publishing status** (APIs & Services > OAuth consent
+screen), with only the owner's own Google account added under **Test users**.
+
+Why this matters: the GitHub Pages site is public. Supabase row-level security
+keeps everyone's `app_data` rows isolated from each other, so a stranger
+signing in wouldn't see anyone else's data — but without this restriction,
+any random visitor could still sign in with their own Google account and get
+a legitimate row in `app_data`, i.e. use this free Supabase project as their
+own free backend. "Testing" status caps sign-in to the explicit test-user
+list regardless of row-level security.
+
+**Do not move this OAuth consent screen to "In production" / verified status**
+— that lifts the test-user cap and opens sign-in to anyone. If broader access
+is ever genuinely wanted, that's a deliberate decision to revisit with the
+user first, not a default to drift into (e.g. while doing unrelated OAuth
+consent screen cleanup).
+
+If setup instructions for this sync layer are ever added to the README, this
+restriction must be included as a required step, not an optional hardening
+note.
+
 ## Supabase project (already created and configured by the user)
 - URL: `https://rrremrggallytwfyfjpa.supabase.co`
 - Publishable key (public by design, already in `js/sync.js`): `sb_publishable_TYvABVg0SSAn4YarBCFSQw_sPXF6jEo`
@@ -56,7 +80,7 @@ alter table public.app_data enable row level security;
 7. Real-device test (sync.js has only been desk-checked; it was never run against the real Supabase): sign in on the phone, confirm a row appears in Table Editor > `app_data`, edit on a second browser, confirm it arrives. Watch for: PKCE `code_challenge_method=s256` being accepted, `redirect_to` matching the allow-list, the token response shape, PostgREST accepting the `updated_at=eq.<timestamptz>` filter with microseconds and `+00:00` (URL-encoded).
 
 ## After the pilot
-- Daily keep-alive: a GitHub Actions workflow that makes one trivial authenticated-free request (e.g. a GET to `/rest/v1/` with the publishable key) so the free project never auto-pauses after a week idle. Create when the project is in real use.
+- Daily keep-alive: **done** — `.github/workflows/supabase-keepalive.yml` runs a daily `GET /rest/v1/app_data?select=app&limit=1` against Supabase with the publishable key (plus `workflow_dispatch` for a manual run), so the free project never auto-pauses after a week idle.
 - Port to `meal-planner` (single blob first: its state is ~8 `mealRotation.*` localStorage keys in one 94 KB `index.html`) and `journal-app` (add a localStorage cache of the entries array first; Drive remains the existing source until migrated). One-time "claim my data" flow = the `push-new` / `choose` paths already in `syncPlan`.
 - Meal Planner and Well Tended already talk via `?log=<meal name>`; keep that working.
 

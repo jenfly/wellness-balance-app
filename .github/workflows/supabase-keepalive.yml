@@ -1,0 +1,16 @@
+name: Supabase keep-alive
+
+on:
+  schedule:
+    - cron: '17 14 * * *'   # daily, 14:17 UTC
+  workflow_dispatch:         # lets you run it by hand to test
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query Supabase
+        run: |
+          curl --fail --silent --show-error \
+            -H "apikey: sb_publishable_TYvABVg0SSAn4YarBCFSQw_sPXF6jEo" \
+            "https://rrremrggallytwfyfjpa.supabase.co/rest/v1/app_data?select=app&limit=1"
