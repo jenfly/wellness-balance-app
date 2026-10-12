@@ -591,7 +591,7 @@
     return syncSectionHTML() +
       tagsSectionHTML() +
       mealLinkSectionHTML() +
-      '<section><h4>Check-in reminder</h4><p class="hint">Well Tended shows a dot on the Check-in tab when it&rsquo;s been a while &mdash; no push notifications.</p>' +
+      '<section><h4>Check-in reminder</h4>' +
       '<label class="fld"><span>Show a dot on the Check-in tab after</span><select id="s-dotdays">' + selOpts([[7, '7 days'], [10, '10 days'], [14, '14 days'], [21, '21 days'], [30, '30 days']], keepDays('checkinDotDays', 7)) + '</select></label></section>' +
       '<section><h4>Housekeeping</h4><label class="fld"><span>Remove done items from tiles after</span><select id="s-donekeep">' + selOpts([[7, '7 days'], [30, '30 days'], [90, '90 days'], [0, 'Never']], keepDays('doneKeepDays', 30)) + '</select></label>' +
       '<label class="fld"><span>Keep Ta-da history for</span><select id="s-logkeep">' + selOpts([[365, '1 year'], [730, '2 years'], [0, 'Forever']], keepDays('logKeepDays', 365)) + '</select></label>' +
