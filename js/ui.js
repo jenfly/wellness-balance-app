@@ -82,7 +82,7 @@
 
   var state = load();
   try { lastRaw = localStorage.getItem(KEY); } catch (e) { /* storage unavailable */ }
-  var ui = { tab: 'tiles', openCat: null, tag: null, editTiles: false, delAsk: null, formFor: null, dateFor: null, reorder: false, showDone: false, sheet: null, showJson: false, driveBusy: false, driveStatus: null, tadaMore: {} };
+  var ui = { tab: 'tiles', openCat: null, tag: null, editTiles: false, delAsk: null, formFor: null, dateFor: null, reorder: false, showDone: false, sheet: null, driveBusy: false, driveStatus: null, tadaMore: {} };
   var snapshot = null, toastTimer = null;
 
   function catOf(id) { return id === 'inbox' ? INBOX : state.cats.find(function (c) { return c.id === id; }); }
@@ -551,9 +551,8 @@
       var last = lastBackupAt(), status = last ? 'Last backed up ' + agoText(last) + '.' : 'Never backed up.';
       driveBody = '<p class="hint">' + esc(status) + '</p>' + (ui.driveStatus ? '<p class="hint">' + esc(ui.driveStatus) + '</p>' : '');
     }
-    return '<section><h4>Data</h4><div class="form-actions"><button class="btn" data-action="backup-drive"' + (ui.driveBusy ? ' disabled' : '') + '>Back up to Drive</button><button class="btn" data-action="copy-json">Copy data as JSON</button></div>' +
-      driveBody +
-      (ui.showJson ? '<textarea id="json-out" readonly aria-label="Data as JSON">' + esc(JSON.stringify(state, null, 2)) + '</textarea>' : '') + '</section>';
+    return '<section><h4>Data</h4><div class="form-actions"><button class="btn" data-action="backup-drive"' + (ui.driveBusy ? ' disabled' : '') + '>Back up to Drive</button><button class="btn" data-action="save-json">Save data as JSON</button></div>' +
+      driveBody + '</section>';
   }
   function tagsSectionHTML() {
     var body = state.tags.length
@@ -606,7 +605,6 @@
     root.innerHTML = '<div class="backdrop" data-action="close-sheet"></div><div class="sheet" role="dialog" aria-modal="true" aria-label="' + title + '"><div class="sheet-head"><h3>' + title + '</h3><button class="icon-btn" data-action="close-sheet" aria-label="Close">' + icon('x') + '</button></div>' +
       (isAdd ? formHTML(null, ui.sheet.catId) : isLog ? logHTML() : settingsHTML()) + '</div>';
     root.querySelectorAll('form[data-form]').forEach(applyType);
-    if (ui.showJson) { var t = $('#json-out'); if (t) { t.focus(); t.select(); } }
   }
   function renderAll() { renderMain(); renderOverlay(); renderSheet(); }
 
@@ -937,7 +935,7 @@
         cc[sec] = !cc[sec]; save(); renderOverlay(); break;
       }
       case 'fab': ui.formFor = null; ui.sheet = { kind: 'add', catId: ui.openCat || 'inbox' }; renderAll(); var f3 = $('#sheet-root #f-text'); if (f3) f3.focus(); break;
-      case 'settings': ui.sheet = { kind: 'settings' }; ui.showJson = false; ui.driveStatus = null; renderSheet(); break;
+      case 'settings': ui.sheet = { kind: 'settings' }; ui.driveStatus = null; renderSheet(); break;
       case 'close-sheet': ui.sheet = null; ui.driveStatus = null; renderSheet(); break;
       case 'log-confirm': {
         var lsh = ui.sheet;
@@ -964,9 +962,15 @@
       case 'undo':
         if (snapshot) { var s = JSON.parse(snapshot); state.cats = s.cats; state.items = s.items; state.tags = s.tags; state.log = s.log; state.checkin = s.checkin; state.settings = s.settings; snapshot = null; save(); renderAll(); }
         $('#toast').hidden = true; break;
-      case 'copy-json':
-        (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(JSON.stringify(state, null, 2)) : Promise.reject()).then(function () { toast('Copied', false); }).catch(function () { ui.showJson = true; renderSheet(); });
+      case 'save-json': {
+        var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+        var link = document.createElement('a');
+        link.href = url; link.download = 'well-tended-' + today() + '.json';
+        document.body.appendChild(link); link.click(); link.remove();
+        URL.revokeObjectURL(url);
         break;
+      }
       case 'backup-drive': doBackup(); break;
       case 'sync-signin': if (window.Sync) Sync.signIn(); break;
       case 'sync-signout': if (window.Sync) { Sync.signOut(); toast('Signed out.', false); } break;
