@@ -309,8 +309,12 @@
     }
     return '<div class="ci-row sw-' + c.color + (set ? '' : ' unset') + '"><span class="ci-name" title="' + esc(c.name) + '">' + (c.icon && ICONS[c.icon] ? catIcon(c, 'ci-ic') : '<i></i>') + '<span class="nm">' + esc(c.name) + '</span></span>' + body + '</div>';
   }
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
   function ciSparkSVG(pts, days, now) {
-    var W = 120, H = 40, PAD = 3, BAR = 4, from = now - days * 86400000;
+    var W = 120, H = 40, PAD = 3, from = now - days * 86400000;
+    var BAR = clamp((W - 2 * PAD) * 7 / days * 0.4, 0.9, 4);
+    var DOT = clamp(BAR * 0.5, 0.8, 1.8);
+    var RX = Math.min(1, BAR / 2);
     function x(at) { return PAD + ((at - from) / (days * 86400000)) * (W - PAD * 2); }
     function y(v) { return PAD + (1 - v / 100) * (H - PAD * 2); }
     var mid = y(50);
@@ -321,8 +325,8 @@
     var marks = pts.map(function (p) {
       var py = y(p.v), top = Math.min(py, mid), h = Math.max(Math.abs(py - mid), 1);
       // The bar alone is nearly invisible for a value close to the baseline, so a dot at the actual point always marks it.
-      return '<rect class="ci-spark-bar" x="' + (x(p.at) - BAR / 2).toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + BAR + '" height="' + h.toFixed(1) + '" rx="1"/>' +
-        '<circle class="ci-spark-dot" cx="' + x(p.at).toFixed(1) + '" cy="' + py.toFixed(1) + '" r="1.8"/>';
+      return '<rect class="ci-spark-bar" x="' + (x(p.at) - BAR / 2).toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + BAR.toFixed(2) + '" height="' + h.toFixed(1) + '" rx="' + RX.toFixed(2) + '"/>' +
+        '<circle class="ci-spark-dot" cx="' + x(p.at).toFixed(1) + '" cy="' + py.toFixed(1) + '" r="' + DOT.toFixed(2) + '"/>';
     }).join('');
     return svgOpen + 'trend, most recently ' + ratingLabel(last.v) + '">' + ref + marks + '</svg>';
   }
