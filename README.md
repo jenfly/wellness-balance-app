@@ -23,7 +23,7 @@ Open the site in Chrome, menu > Install app (or Add to Home screen).
 
 ## Setting up Google Drive backup
 
-Settings > "Backup and restore" saves your whole app state to a single file in your Google Drive, and can restore it later. It needs a one-time setup before it will work:
+Settings > "Data" > "Back up to Drive" saves your whole app state to a single file in your Google Drive. It needs a one-time setup before it will work:
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com).
 2. Create a project (or use an existing one).
@@ -41,8 +41,8 @@ Settings > "Backup and restore" saves your whole app state to a single file in y
 
 Notes:
 - The app requests the `drive.file` scope, which only ever grants access to the single backup file it creates (`well-tended-backup.json`) — never the rest of your Drive.
-- If you skip this setup, tapping "Back up to Drive" or "Restore" just explains it isn't configured yet, rather than failing silently.
-- Restoring replaces the entire app state on this device (after showing what's in the backup and asking you to confirm) — it doesn't merge. Right after restoring, an "Undo" option briefly appears if you want the previous state back.
+- If you skip this setup, tapping "Back up to Drive" just explains it isn't configured yet, rather than failing silently.
+- This is a one-way, manual backup — there's no in-app restore. If you ever need it back, `well-tended-backup.json` is in your Google Drive and can be opened by hand.
 
 ## Cloud sync
 

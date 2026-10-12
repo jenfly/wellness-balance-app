@@ -82,7 +82,7 @@
 
   var state = load();
   try { lastRaw = localStorage.getItem(KEY); } catch (e) { /* storage unavailable */ }
-  var ui = { tab: 'tiles', openCat: null, tag: null, editTiles: false, delAsk: null, formFor: null, dateFor: null, reorder: false, showDone: false, sheet: null, resetAsk: false, showJson: false, driveBusy: false, driveStatus: null, restoreOffer: null, tadaMore: {} };
+  var ui = { tab: 'tiles', openCat: null, tag: null, editTiles: false, delAsk: null, formFor: null, dateFor: null, reorder: false, showDone: false, sheet: null, showJson: false, driveBusy: false, driveStatus: null, tadaMore: {} };
   var snapshot = null, toastTimer = null;
 
   function catOf(id) { return id === 'inbox' ? INBOX : state.cats.find(function (c) { return c.id === id; }); }
@@ -391,14 +391,6 @@
     upcoming: ['Upcoming', 'Every dated item across all categories, with a toggle for recurring items and a switch between date order and category groups.'],
     checkin: ['Weekly check-in', 'A slider per category (neglected, balanced, over-focused) plus the reflective prompts.']
   };
-  function backupBannerHTML() {
-    if (!driveConfigured()) return '';
-    var remindDays = keepDays('backupReminderDays', 30);
-    if (!remindDays) return '';
-    var last = lastBackupAt();
-    if (!last || daysSince(last) <= remindDays) return '';
-    return '<div class="banner"><p>It&rsquo;s been ' + daysSince(last) + ' days since your last backup.</p><button class="btn flat" data-action="settings">Back up now</button></div>';
-  }
   function renderMain() {
     var y = window.scrollY;
     var d = new Date().toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' });
@@ -408,7 +400,7 @@
     else if (ui.tab === 'tada') body = tadaView();
     else if (ui.tab === 'checkin') body = checkinView();
     else body = '<div class="placeholder"><h2>' + PLACEHOLDERS[ui.tab][0] + '</h2><p>' + PLACEHOLDERS[ui.tab][1] + '</p><p style="margin-top:10px">Next up in the build.</p></div>';
-    $('#main').innerHTML = backupBannerHTML() + '<header class="top"><div><h1>Well Tended</h1><p class="date">' + esc(d) + '</p></div><button class="icon-btn" data-action="settings" aria-label="Settings">' + icon('gear') + '</button></header>' + body;
+    $('#main').innerHTML = '<header class="top"><div><h1>Well Tended</h1><p class="date">' + esc(d) + '</p></div><button class="icon-btn" data-action="settings" aria-label="Settings">' + icon('gear') + '</button></header>' + body;
     window.scrollTo(0, y);
     var tabs = $('#tabbar').children;
     for (var k = 0; k < tabs.length; k++) { if (tabs[k].dataset.tab === ui.tab) tabs[k].setAttribute('aria-current', 'page'); else tabs[k].removeAttribute('aria-current'); }
@@ -551,22 +543,17 @@
   }
 
   /* ---------- Sheets ---------- */
-  function backupSectionHTML() {
+  function dataSectionHTML() {
+    var driveBody;
     if (!driveConfigured()) {
-      return '<section><h4>Backup and restore</h4><p class="hint">Back up to Google Drive and restore from it. Needs a one-time setup first &mdash; see README &ldquo;Setting up Google Drive backup&rdquo;.</p></section>';
+      driveBody = '<p class="hint">Google Drive backup needs a one-time setup first &mdash; see README &ldquo;Setting up Google Drive backup&rdquo;.</p>';
+    } else {
+      var last = lastBackupAt(), status = last ? 'Last backed up ' + agoText(last) + '.' : 'Never backed up.';
+      driveBody = '<p class="hint">' + esc(status) + '</p>' + (ui.driveStatus ? '<p class="hint">' + esc(ui.driveStatus) + '</p>' : '');
     }
-    if (ui.restoreOffer) {
-      var r = ui.restoreOffer, when = new Date(r.exportedAt).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' });
-      var catN = r.state.cats.length, itemN = r.state.items.length;
-      var counts = catN + (catN === 1 ? ' category' : ' categories') + ', ' + itemN + (itemN === 1 ? ' item' : ' items');
-      return '<section><h4>Backup and restore</h4><p class="hint">Backup from ' + esc(when) + ' &mdash; ' + counts + '. Restoring replaces everything currently on this device.</p>' +
-        '<div class="form-actions"><button class="btn primary" data-action="restore-confirm">Restore</button><button class="btn" data-action="restore-cancel">Cancel</button></div></section>';
-    }
-    var last = lastBackupAt(), status = last ? 'Last backed up ' + agoText(last) + '.' : 'Never backed up.';
-    return '<section><h4>Backup and restore</h4><p class="hint">' + esc(status) + '</p>' +
-      '<div class="form-actions"><button class="btn" data-action="backup-drive"' + (ui.driveBusy ? ' disabled' : '') + '>Back up to Drive</button><button class="btn" data-action="restore-drive"' + (ui.driveBusy ? ' disabled' : '') + '>Restore</button></div>' +
-      (ui.driveStatus ? '<p class="hint">' + esc(ui.driveStatus) + '</p>' : '') +
-      '<label class="fld"><span>Remind me to back up after</span><select id="s-backupdays">' + selOpts([[7, '7 days'], [14, '14 days'], [30, '30 days'], [60, '60 days'], [90, '90 days'], [0, 'Never']], keepDays('backupReminderDays', 30)) + '</select></label></section>';
+    return '<section><h4>Data</h4><div class="form-actions"><button class="btn" data-action="backup-drive"' + (ui.driveBusy ? ' disabled' : '') + '>Back up to Drive</button><button class="btn" data-action="copy-json">Copy data as JSON</button></div>' +
+      driveBody +
+      (ui.showJson ? '<textarea id="json-out" readonly aria-label="Data as JSON">' + esc(JSON.stringify(state, null, 2)) + '</textarea>' : '') + '</section>';
   }
   function tagsSectionHTML() {
     var body = state.tags.length
@@ -602,7 +589,6 @@
   }
   function settingsHTML() {
     return syncSectionHTML() +
-      backupSectionHTML() +
       tagsSectionHTML() +
       mealLinkSectionHTML() +
       '<section><h4>Check-in reminder</h4><p class="hint">Well Tended shows a dot on the Check-in tab when it&rsquo;s been a while &mdash; no push notifications.</p>' +
@@ -610,8 +596,7 @@
       '<section><h4>Housekeeping</h4><label class="fld"><span>Remove done items from tiles after</span><select id="s-donekeep">' + selOpts([[7, '7 days'], [30, '30 days'], [90, '90 days'], [0, 'Never']], keepDays('doneKeepDays', 30)) + '</select></label>' +
       '<label class="fld"><span>Keep Ta-da history for</span><select id="s-logkeep">' + selOpts([[365, '1 year'], [730, '2 years'], [0, 'Forever']], keepDays('logKeepDays', 365)) + '</select></label>' +
       '<p class="hint">Items removed from tiles stay in your Ta-da history. Changes apply right away.</p></section>' +
-      '<section><h4>Data</h4><div class="form-actions"><button class="btn" data-action="copy-json">Copy data as JSON</button><button class="btn' + (ui.resetAsk ? ' primary' : '') + '" data-action="reset-data">' + (ui.resetAsk ? 'Tap again to erase everything' : 'Erase all data') + '</button></div>' +
-      (ui.showJson ? '<textarea id="json-out" readonly aria-label="Data as JSON">' + esc(JSON.stringify(state, null, 2)) + '</textarea>' : '') + '</section>';
+      dataSectionHTML();
   }
   function renderSheet() {
     var root = $('#sheet-root');
@@ -637,7 +622,7 @@
   function navLayers() { return (ui.tab !== 'tiles' ? 1 : 0) + (ui.openCat ? 1 : 0) + (ui.formFor ? 1 : 0) + (ui.sheet ? 1 : 0); }
   function closeNavLayersTo(target) {
     while (navLayers() > target) {
-      if (ui.sheet) { ui.sheet = null; ui.restoreOffer = null; ui.driveStatus = null; }
+      if (ui.sheet) { ui.sheet = null; ui.driveStatus = null; }
       else if (ui.formFor) { ui.formFor = null; }
       else if (ui.openCat) { ui.openCat = null; ui.dateFor = null; }
       else if (ui.tab !== 'tiles') { ui.tab = 'tiles'; }
@@ -792,11 +777,6 @@
       });
   }
 
-  function downloadBackup(token, fileId) {
-    return fetch('https://www.googleapis.com/drive/v3/files/' + fileId + '?alt=media', { headers: { Authorization: 'Bearer ' + token } })
-      .then(function (res) { if (!res.ok) throw new Error('download-failed'); return res.text(); });
-  }
-
   function uploadBackup(token, jsonContent) {
     function withId(fileId) {
       if (fileId) {
@@ -836,45 +816,6 @@
         ui.driveBusy = false; ui.driveStatus = null; renderSheet();
         toast('Backup to Google Drive failed — try again.', false);
       });
-  }
-
-  // Downloads and validates the backup first, then offers it for confirmation
-  // in the sheet rather than asking the user to commit to a restore blind.
-  function doRestoreCheck() {
-    if (!driveConfigured()) { toast('Backup not set up yet — see README "Setting up Google Drive backup".', false); return; }
-    ui.driveBusy = true; ui.driveStatus = 'Connecting to Google…'; renderSheet();
-    loadGis()
-      .then(function () { return getAccessToken(); })
-      .then(function (token) {
-        ui.driveStatus = 'Looking for a backup…'; renderSheet();
-        return findBackupFileId(token).then(function (fileId) {
-          if (!fileId) throw new Error('no-backup');
-          return downloadBackup(token, fileId);
-        });
-      })
-      .then(function (content) {
-        var data = JSON.parse(content);
-        if (!data || data.version !== 1 || !data.state || !Array.isArray(data.state.cats) || !Array.isArray(data.state.items)) {
-          throw new Error('invalid-backup');
-        }
-        ui.driveBusy = false; ui.driveStatus = null; ui.restoreOffer = data; renderSheet();
-      })
-      .catch(function (err) {
-        ui.driveBusy = false; ui.driveStatus = null; renderSheet();
-        var msg = err && err.message === 'no-backup' ? 'No backup found on Google Drive.'
-          : err && err.message === 'invalid-backup' ? 'That backup file could not be read.'
-          : 'Restore from Google Drive failed — try again.';
-        toast(msg, false);
-      });
-  }
-
-  function doRestoreConfirm() {
-    if (!ui.restoreOffer) return;
-    takeSnapshot();
-    state = normalize(ui.restoreOffer.state);
-    ui.restoreOffer = null; ui.sheet = null; ui.openCat = null; ui.tag = null;
-    save(); renderAll();
-    toast('Restored from Google Drive.', true);
   }
 
   /* ---------- Events ---------- */
@@ -996,8 +937,8 @@
         cc[sec] = !cc[sec]; save(); renderOverlay(); break;
       }
       case 'fab': ui.formFor = null; ui.sheet = { kind: 'add', catId: ui.openCat || 'inbox' }; renderAll(); var f3 = $('#sheet-root #f-text'); if (f3) f3.focus(); break;
-      case 'settings': ui.sheet = { kind: 'settings' }; ui.resetAsk = false; ui.showJson = false; ui.restoreOffer = null; ui.driveStatus = null; renderSheet(); break;
-      case 'close-sheet': ui.sheet = null; ui.restoreOffer = null; ui.driveStatus = null; renderSheet(); break;
+      case 'settings': ui.sheet = { kind: 'settings' }; ui.showJson = false; ui.driveStatus = null; renderSheet(); break;
+      case 'close-sheet': ui.sheet = null; ui.driveStatus = null; renderSheet(); break;
       case 'log-confirm': {
         var lsh = ui.sheet;
         if (!lsh || lsh.kind !== 'log') break;
@@ -1023,17 +964,10 @@
       case 'undo':
         if (snapshot) { var s = JSON.parse(snapshot); state.cats = s.cats; state.items = s.items; state.tags = s.tags; state.log = s.log; state.checkin = s.checkin; state.settings = s.settings; snapshot = null; save(); renderAll(); }
         $('#toast').hidden = true; break;
-      case 'reset-data':
-        if (!ui.resetAsk) { ui.resetAsk = true; renderSheet(); }
-        else { state = emptyState(); ui.resetAsk = false; ui.sheet = null; ui.openCat = null; ui.tag = null; save(); renderAll(); toast('All data erased', false); }
-        break;
       case 'copy-json':
         (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(JSON.stringify(state, null, 2)) : Promise.reject()).then(function () { toast('Copied', false); }).catch(function () { ui.showJson = true; renderSheet(); });
         break;
       case 'backup-drive': doBackup(); break;
-      case 'restore-drive': doRestoreCheck(); break;
-      case 'restore-confirm': doRestoreConfirm(); break;
-      case 'restore-cancel': ui.restoreOffer = null; renderSheet(); break;
       case 'sync-signin': if (window.Sync) Sync.signIn(); break;
       case 'sync-signout': if (window.Sync) { Sync.signOut(); toast('Signed out.', false); } break;
       case 'sync-now': if (window.Sync) Sync.syncNow(); break;
@@ -1067,7 +1001,6 @@
     } else if (t.id === 's-logcat') { state.settings.logCat = t.value; save();
     } else if (t.id === 'log-cat') { state.settings.logCat = t.value; if (ui.sheet) { ui.sheet.catId = t.value; ui.sheet.missing = false; } save();
     } else if (t.id === 's-dotdays') { state.settings.checkinDotDays = Number(t.value); save(); updateTabDot();
-    } else if (t.id === 's-backupdays') { state.settings.backupReminderDays = Number(t.value); save(); renderMain();
     } else if (t.id === 'tada-rec') { state.settings.tadaRecurring = t.checked; save(); renderMain();
     } else if (t.name === 'tada-days') { state.settings.tadaDays = Number(t.value); save(); renderMain();
     } else if (t.name === 'tada-group') { state.settings.tadaGroup = t.value; save(); renderMain();
