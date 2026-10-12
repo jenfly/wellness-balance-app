@@ -182,7 +182,11 @@ function pastBucket(s, days) {
   if (days === undefined || days <= 30) {
     if (n <= 0) return { key: 'today', label: 'Today' };
     if (n === 1) return { key: 'yesterday', label: 'Yesterday' };
-    if (n < 7) return { key: 'd' + s, label: d.toLocaleDateString('en-CA', { weekday: 'long' }) };
+    if (n < 7) {
+      const wd = d.toLocaleDateString('en-CA', { weekday: 'long' });
+      const md = d.toLocaleDateString('en-CA', d.getFullYear() === now.getFullYear() ? { month: 'long', day: 'numeric' } : { month: 'long', day: 'numeric', year: 'numeric' });
+      return { key: 'd' + s, label: wd + ', ' + md };
+    }
   }
   const sameYear = d.getFullYear() === now.getFullYear();
   const sameMonth = sameYear && d.getMonth() === now.getMonth();
