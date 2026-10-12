@@ -309,4 +309,31 @@ function emptyState() {
     collapse: {}
   };
 }
-if (typeof module !== 'undefined') module.exports = { emptyState, today, addDays, uid, daysSince, checkinDue, ratingLabel, ratingGroups, saveCheckin, todayCheckinEntry, updateTodayCheckinNotes, checkinHistoryInRange, entryIsRecurring, tadaEntries, fmtPast, pastBucket, tadaGroupDefaultOpen, tadaGroupOpen, purgeOld, clearDone, upcomingItems, dateBucket, openSorted, moveItem, completeItem, addFreq, isTucked, slotSort, doneItems, fmtDue, nextOrder, diffDays };
+/* ---------- Cloud sync decision (pure) ----------
+   meta   = { remoteAt: updated_at of the cloud copy this device last synced with (null = never),
+              dirty: local edits not yet pushed, editedAt: ms of the last local edit }
+   remote = null (no cloud copy yet) or { updated_at, doc }
+   same   = the cloud doc and the local state hold identical content
+   Returns what the sync pass should do:
+     push-new  no cloud copy: create it from this device
+     adopt     first link and both copies already match: just record the cloud version
+     choose    first link and the copies differ: ask the user which one wins
+     noop      nothing changed anywhere
+     push      only this device changed: update the cloud copy
+     pull      cloud copy changed elsewhere (and nothing unsynced here, or it is newer): take it
+     overwrite both changed, this device's edit is newer: last write wins, push over the cloud copy */
+function syncPlan(meta, remote, same) {
+  if (!remote) return 'push-new';
+  if (!meta.remoteAt) return same ? 'adopt' : 'choose';
+  if (remote.updated_at === meta.remoteAt) return meta.dirty ? 'push' : 'noop';
+  if (!meta.dirty) return 'pull';
+  return (meta.editedAt || 0) > Date.parse(remote.updated_at) ? 'overwrite' : 'pull';
+}
+// Key-order-independent text form of a JSON value (Postgres jsonb does not keep key order).
+function canonJSON(v) {
+  if (Array.isArray(v)) return '[' + v.map(canonJSON).join(',') + ']';
+  if (v && typeof v === 'object') return '{' + Object.keys(v).sort().filter(function (k) { return v[k] !== undefined; }).map(function (k) { return JSON.stringify(k) + ':' + canonJSON(v[k]); }).join(',') + '}';
+  return JSON.stringify(v);
+}
+
+if (typeof module !== 'undefined') module.exports = { syncPlan, canonJSON, emptyState, today, addDays, uid, daysSince, checkinDue, ratingLabel, ratingGroups, saveCheckin, todayCheckinEntry, updateTodayCheckinNotes, checkinHistoryInRange, entryIsRecurring, tadaEntries, fmtPast, pastBucket, tadaGroupDefaultOpen, tadaGroupOpen, purgeOld, clearDone, upcomingItems, dateBucket, openSorted, moveItem, completeItem, addFreq, isTucked, slotSort, doneItems, fmtDue, nextOrder, diffDays };
