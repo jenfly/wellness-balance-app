@@ -20,8 +20,31 @@ assert(![...d.querySelectorAll('.up-group .row-text')].some(x=>x.textContent.inc
 chg('#tada-rec',e=>e.checked=true);
 // by date
 chg('input[name=tada-group][value=date]',e=>e.checked=true);console.log(heads());
-assert(heads().includes('Yesterday')&&heads().includes('Past week'));
+assert(heads().some(x=>x.startsWith('Yesterday'))&&heads().some(x=>x.startsWith('Past week')));
 assert(d.querySelector('.catlabel'));
+// collapsible groups: Today/Yesterday/Past week default open even at 365 days, older month groups default collapsed
+{
+  const grp=h=>[...d.querySelectorAll('.up-group')].find(g=>g.querySelector('.up-h').textContent.startsWith(h));
+  assert.strictEqual(grp('Yesterday').querySelector('.sec-toggle').getAttribute('aria-expanded'),'true');
+  assert(grp('Yesterday').querySelector('.items'));
+  const sept=grp('September');
+  assert.strictEqual(sept.querySelector('.sec-toggle').getAttribute('aria-expanded'),'false');
+  assert(!sept.querySelector('.items'));
+  // expand it: toggle is remembered for this window (365) only
+  sept.querySelector('.sec-toggle').dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
+  assert.strictEqual(d.querySelector('input[name=tada-days][value="365"]').checked,true);
+  const sept2=grp('September');
+  assert.strictEqual(sept2.querySelector('.sec-toggle').getAttribute('aria-expanded'),'true');
+  assert(sept2.querySelector('.items'));
+  // switching window doesn't inherit the toggle; switching back to 365 remembers it
+  win(90);
+  const sept90=grp('September');
+  if(sept90) assert.strictEqual(sept90.querySelector('.sec-toggle').getAttribute('aria-expanded'),'false');
+  win(365);
+  assert.strictEqual(grp('September').querySelector('.sec-toggle').getAttribute('aria-expanded'),'true');
+  // collapse it back for the assertions below
+  grp('September').querySelector('.sec-toggle').dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
+}
 // persists across tab switches
 click('[data-tab=upcoming]');click('[data-tab=tada]');assert(d.querySelector('input[name=tada-days][value="365"]').checked);
 // clear done in a tile

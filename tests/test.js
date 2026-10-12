@@ -56,6 +56,23 @@ assert.deepStrictEqual([7,30,90,365].map(d=>cnt(d,false)),[1,3,4,5]);
 const te=L.tadaEntries(s3,{days:365,recurring:true});assert(te.every((e,i)=>i===0||te[i-1].at>=e.at));
 assert.strictEqual(L.fmtPast(L.today()),'Today');assert.strictEqual(L.fmtPast(L.addDays(L.today(),-1)),'Yesterday');
 console.log(L.fmtPast(L.addDays(L.today(),-3)),L.fmtPast(L.addDays(L.today(),-20)),L.fmtPast(L.addDays(L.today(),-300)),'|',L.pastBucket(L.addDays(L.today(),-5)).label,L.pastBucket(L.addDays(L.today(),-9)).label,L.pastBucket(L.addDays(L.today(),-40)).label,L.pastBucket(L.addDays(L.today(),-300)).label);
+// ta-da collapsible group defaults: 7-day window always open; longer windows open only
+// for today/yesterday/past week (by-date) and collapsed otherwise, until manually toggled
+assert.strictEqual(L.tadaGroupDefaultOpen(7,'date','m2026-09'),true);
+assert.strictEqual(L.tadaGroupDefaultOpen(7,'category','fitness'),true);
+assert.strictEqual(L.tadaGroupDefaultOpen(30,'date','today'),true);
+assert.strictEqual(L.tadaGroupDefaultOpen(30,'date','yesterday'),true);
+assert.strictEqual(L.tadaGroupDefaultOpen(30,'date','week'),true);
+assert.strictEqual(L.tadaGroupDefaultOpen(30,'date','m2026-09'),false);
+assert.strictEqual(L.tadaGroupDefaultOpen(365,'category','fitness'),false);
+const s3b=L.seed();
+assert.strictEqual(L.tadaGroupOpen(s3b,90,'date','m2026-09'),false);
+s3b.settings.tadaCollapse={90:{'m2026-09':false}};
+assert.strictEqual(L.tadaGroupOpen(s3b,90,'date','m2026-09'),true,'manual toggle overrides the default');
+assert.strictEqual(L.tadaGroupOpen(s3b,365,'date','m2026-09'),false,'toggle is remembered per window only');
+assert.strictEqual(L.tadaGroupOpen(s3b,90,'date','today'),true,'untouched groups keep following the default');
+s3b.settings.tadaCollapse[90].today=true;
+assert.strictEqual(L.tadaGroupOpen(s3b,90,'date','today'),false,'a manual toggle overrides even an always-open default');
 // completing logs rec flag
 const s4=L.seed();const vac4=s4.items.find(i=>i.text.startsWith("Mop"));L.completeItem(s4,vac4.id);assert.strictEqual(s4.log[s4.log.length-1].rec,true);
 // purge

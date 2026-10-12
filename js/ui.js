@@ -82,7 +82,7 @@
 
   var state = load();
   try { lastRaw = localStorage.getItem(KEY); } catch (e) { /* storage unavailable */ }
-  var ui = { tab: 'tiles', openCat: null, tag: null, editTiles: false, delAsk: null, formFor: null, dateFor: null, reorder: false, showDone: false, sheet: null, resetAsk: false, showJson: false, driveBusy: false, driveStatus: null, restoreOffer: null };
+  var ui = { tab: 'tiles', openCat: null, tag: null, editTiles: false, delAsk: null, formFor: null, dateFor: null, reorder: false, showDone: false, sheet: null, resetAsk: false, showJson: false, driveBusy: false, driveStatus: null, restoreOffer: null, tadaMore: {} };
   var snapshot = null, toastTimer = null;
 
   function catOf(id) { return id === 'inbox' ? INBOX : state.cats.find(function (c) { return c.id === id; }); }
@@ -222,6 +222,7 @@
   }
   /* ---------- Ta-da view ---------- */
   var TADA_WINDOWS = [[7, '7 days'], [30, '30 days'], [90, '90 days'], [365, '1 year']];
+  var TADA_GROUP_CAP = 20;
   function tadaRow(e, mode, bucketKey) {
     var c = catOf(e.catId) || INBOX, day = ds(new Date(e.at)), meta = '';
     if (entryIsRecurring(state, e)) meta += '<span class="kind">' + icon('repeat') + 'Recurring</span>';
@@ -229,6 +230,22 @@
     if (mode === 'date') meta += '<span class="catlabel"><i></i>' + esc(c.name) + '</span>';
     return '<li class="row tada-row sw-' + c.color + '"><div class="row-track"><div class="row-content"><span class="done-mark">' + icon('check') + '</span><div class="row-main static"><span class="row-text">' + esc(e.text) + '</span>' + (meta ? '<span class="row-meta">' + meta + '</span>' : '') + '</div></div>' +
       '<button class="row-delete" data-action="tada-delete" data-id="' + e.id + '" aria-label="Remove: ' + esc(e.text) + '">' + icon('trash') + '</button></div></li>';
+  }
+  // Shared by both groupings so collapse/cap behavior can't drift apart between them.
+  function tadaGroupSectionHTML(mode, days, key, label, items, cat) {
+    var open = tadaGroupOpen(state, days, mode, key);
+    var moreKey = mode + ':' + days + ':' + key;
+    var showAll = !!ui.tadaMore[moreKey];
+    var shown = open ? (showAll ? items : items.slice(0, TADA_GROUP_CAP)) : [];
+    var hidden = open && !showAll ? Math.max(0, items.length - TADA_GROUP_CAP) : 0;
+    var labelHTML = '<span>' + (cat ? catIcon(cat, 'cicon sm') : '') + esc(label) + '<span class="count">' + items.length + '</span></span>';
+    var btn = '<button type="button" class="sec-toggle tada-h-btn" data-action="tada-toggle" data-mode="' + mode + '" data-days="' + days + '" data-key="' + esc(key) + '" aria-expanded="' + open + '">' +
+      labelHTML + icon(open ? 'down' : 'right') + '</button>';
+    var headClass = cat ? 'up-h cat full sw-' + cat.color : 'up-h';
+    var rowBucketKey = mode === 'date' ? key : '';
+    var rowsHTML = open ? '<ul class="items compact">' + shown.map(function (e) { return tadaRow(e, mode, rowBucketKey); }).join('') + '</ul>' : '';
+    var moreHTML = hidden ? '<button type="button" class="text-btn tada-more" data-action="tada-more" data-mode="' + mode + '" data-days="' + days + '" data-key="' + esc(key) + '">Show ' + hidden + ' more</button>' : '';
+    return '<section class="up-group compact' + (open ? '' : ' collapsed') + '"><h3 class="' + headClass + '">' + btn + '</h3>' + rowsHTML + moreHTML + '</section>';
   }
   function tadaView() {
     var days = state.settings.tadaDays || 7, rec = state.settings.tadaRecurring !== false, mode = state.settings.tadaGroup === 'date' ? 'date' : 'category';
@@ -252,13 +269,13 @@
         groups[idx[b.key]].items.push(e);
       });
       body = groups.map(function (g) {
-        return '<section class="up-group compact"><h3 class="up-h">' + esc(g.label) + '</h3><ul class="items compact">' + g.items.map(function (e) { return tadaRow(e, 'date', g.key); }).join('') + '</ul></section>';
+        return tadaGroupSectionHTML('date', days, g.key, g.label, g.items, null);
       }).join('');
     } else {
       body = allCats().map(function (c) { return { c: c, items: list.filter(function (e) { return e.catId === c.id; }) }; })
         .filter(function (g) { return g.items.length; })
         .map(function (g) {
-          return '<section class="up-group compact"><h3 class="up-h cat sw-' + g.c.color + '">' + catIcon(g.c, 'cicon sm') + esc(g.c.name) + '<span class="count">' + g.items.length + '</span></h3><ul class="items compact">' + g.items.map(function (e) { return tadaRow(e, 'category', ''); }).join('') + '</ul></section>';
+          return tadaGroupSectionHTML('category', days, g.c.id, g.c.name, g.items, g.c);
         }).join('');
     }
     return controls + body;
@@ -797,7 +814,7 @@
     if (!t) return;
     var a = t.dataset.action, id = t.dataset.id, it;
     switch (a) {
-      case 'tab': ui.tab = t.dataset.tab; ui.editTiles = false; ui.delAsk = null; if (ui.tab !== 'checkin') { ui.ciEdit = false; ui.ciDraft = null; ui.ciHistorySel = null; } renderMain(); window.scrollTo(0, 0); break;
+      case 'tab': ui.tab = t.dataset.tab; ui.editTiles = false; ui.delAsk = null; if (ui.tab !== 'checkin') { ui.ciEdit = false; ui.ciDraft = null; ui.ciHistorySel = null; } if (ui.tab !== 'tada') ui.tadaMore = {}; renderMain(); window.scrollTo(0, 0); break;
       case 'open-cat': ui.openCat = id; ui.formFor = null; ui.dateFor = null; ui.reorder = false; ui.showDone = false; renderOverlay(); break;
       case 'close-overlay': ui.openCat = null; ui.formFor = null; ui.dateFor = null; renderAll(); break;
       case 'filter': ui.tag = t.dataset.tag || null; renderMain(); renderOverlay(); break;
@@ -881,6 +898,15 @@
       case 'item-add': ui.formFor = 'new'; ui.dateFor = null; renderOverlay(); var f2 = $('#overlay-root #f-text'); if (f2) f2.focus(); break;
       case 'item-delete': takeSnapshot(); state.items = state.items.filter(function (x) { return x.id !== id; }); ui.formFor = null; save(); renderAll(); toast('Deleted', true); break;
       case 'tada-delete': takeSnapshot(); state.log = state.log.filter(function (x) { return x.id !== id; }); save(); renderMain(); toast('Removed from Ta-da', true); break;
+      case 'tada-toggle': {
+        var ttDays = Number(t.dataset.days), ttMode = t.dataset.mode, ttKey = t.dataset.key;
+        var ttOpen = tadaGroupOpen(state, ttDays, ttMode, ttKey);
+        state.settings.tadaCollapse = state.settings.tadaCollapse || {};
+        var ttWin = state.settings.tadaCollapse[ttDays] = state.settings.tadaCollapse[ttDays] || {};
+        ttWin[ttKey] = ttOpen; save(); renderMain();
+        break;
+      }
+      case 'tada-more': ui.tadaMore[t.dataset.mode + ':' + t.dataset.days + ':' + t.dataset.key] = true; renderMain(); break;
       case 'due-clear': { var dueInput = t.closest('form').querySelector('#f-due'); dueInput.value = ''; dueInput.focus(); break; }
       case 'form-cancel': if (t.closest('.sheet')) ui.sheet = null; else ui.formFor = null; renderAll(); break;
       case 'toggle-reorder': ui.reorder = !ui.reorder; renderOverlay(); break;

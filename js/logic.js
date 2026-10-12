@@ -150,6 +150,18 @@ function tadaEntries(state, opts) {
     .filter((e) => diffDays(ds(new Date(e.at))) >= -(days - 1) && (rec || !entryIsRecurring(state, e)))
     .sort((a, b) => b.at - a.at);
 }
+// Ta-da collapsible groups: the 7-day window starts fully open; longer windows start
+// collapsed except Today/Yesterday/Past week, which always start open (by-date only).
+function tadaGroupDefaultOpen(days, mode, key) {
+  if (days === 7) return true;
+  return mode === 'date' && (key === 'today' || key === 'yesterday' || key === 'week');
+}
+// A manual toggle (state.settings.tadaCollapse[days][key] = collapsed?) always overrides the default.
+function tadaGroupOpen(state, days, mode, key) {
+  const win = state.settings && state.settings.tadaCollapse && state.settings.tadaCollapse[days];
+  if (win && Object.prototype.hasOwnProperty.call(win, key)) return !win[key];
+  return tadaGroupDefaultOpen(days, mode, key);
+}
 function fmtPast(s) {
   const n = -diffDays(s), d = parseDate(s);
   if (n <= 0) return 'Today';
@@ -284,4 +296,4 @@ function emptyState() {
     collapse: {}
   };
 }
-if (typeof module !== 'undefined') module.exports = { emptyState, today, addDays, uid, daysSince, checkinDue, ratingLabel, ratingGroups, saveCheckin, todayCheckinEntry, updateTodayCheckinNotes, checkinHistoryInRange, entryIsRecurring, tadaEntries, fmtPast, pastBucket, purgeOld, clearDone, upcomingItems, dateBucket, openSorted, moveItem, completeItem, addFreq, isTucked, slotSort, doneItems, fmtDue, nextOrder, diffDays };
+if (typeof module !== 'undefined') module.exports = { emptyState, today, addDays, uid, daysSince, checkinDue, ratingLabel, ratingGroups, saveCheckin, todayCheckinEntry, updateTodayCheckinNotes, checkinHistoryInRange, entryIsRecurring, tadaEntries, fmtPast, pastBucket, tadaGroupDefaultOpen, tadaGroupOpen, purgeOld, clearDone, upcomingItems, dateBucket, openSorted, moveItem, completeItem, addFreq, isTucked, slotSort, doneItems, fmtDue, nextOrder, diffDays };

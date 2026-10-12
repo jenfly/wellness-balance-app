@@ -309,6 +309,12 @@ body.dragging{cursor:grabbing;-webkit-user-select:none;user-select:none}
 .done-mark svg.i{width:18px;height:18px;stroke-width:2.6}
 .row-main.static{cursor:default}
 .up-h .count{margin-left:8px;font:500 13px var(--font-body);opacity:.7}
+.tada-h-btn{padding:10px 0}
+.up-h.cat.full{display:block;padding:0}
+.up-h.cat.full .tada-h-btn{padding:10px 12px}
+.up-group.collapsed .up-h:not(.cat){border-bottom:1px solid var(--line);padding-bottom:6px}
+.up-group.collapsed{margin-bottom:2px}
+.tada-more{display:block;margin:4px auto 0}
 .up-group.empty{padding-bottom:30px}
 .up-group.drop-eligible .up-h{outline:2px dashed var(--accent);outline-offset:6px;border-radius:8px}
 .up-group.drop-hover{background:var(--chip);border-radius:12px}
