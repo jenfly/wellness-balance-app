@@ -18,17 +18,23 @@ win(365);assert(d.querySelector('.summary').textContent.includes('10 done in the
 chg('#tada-rec',e=>e.checked=false);assert(d.querySelector('.summary').textContent.includes('5 done'));
 assert(![...d.querySelectorAll('.up-group .row-text')].some(x=>x.textContent.includes('Mop')));
 chg('#tada-rec',e=>e.checked=true);
-// by date
+// by date — win(90) was the last window selected above; switch to 30 first to check the
+// day-level split (Today/Yesterday/individual days), which only applies at 7/30
+win(30);
 chg('input[name=tada-group][value=date]',e=>e.checked=true);console.log(heads());
 const day3=w.pastBucket(w.addDays(w.today(),-3)).label, day5=w.pastBucket(w.addDays(w.today(),-5)).label;
 assert(heads().some(x=>x.startsWith('Yesterday'))&&heads().some(x=>x.startsWith(day3))&&heads().some(x=>x.startsWith(day5)));
 assert(!heads().some(x=>x.startsWith('Past week')));
 assert(d.querySelector('.catlabel'));
-// collapsible groups: Today/Yesterday/individual preceding days default open even at 365 days, older month groups default collapsed
+// at 90/365 there's no individual-day split: everything, including today/yesterday, rolls into month buckets
+win(365);
+assert(!heads().some(x=>x.startsWith('Yesterday'))&&!heads().some(x=>x.startsWith(day3)));
+// collapsible groups: at 365 the current month takes over as the always-open "recent" group, older months default collapsed
 {
   const grp=h=>[...d.querySelectorAll('.up-group')].find(g=>g.querySelector('.up-h').textContent.startsWith(h));
-  assert.strictEqual(grp('Yesterday').querySelector('.sec-toggle').getAttribute('aria-expanded'),'true');
-  assert(grp('Yesterday').querySelector('.items'));
+  const curMonth=w.pastBucket(w.today(),365).label;
+  assert.strictEqual(grp(curMonth).querySelector('.sec-toggle').getAttribute('aria-expanded'),'true');
+  assert(grp(curMonth).querySelector('.items'));
   const sept=grp('September');
   assert.strictEqual(sept.querySelector('.sec-toggle').getAttribute('aria-expanded'),'false');
   assert(!sept.querySelector('.items'));

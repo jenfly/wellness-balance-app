@@ -264,7 +264,7 @@
     } else if (mode === 'date') {
       var groups = [], idx = {};
       list.forEach(function (e) {
-        var b = pastBucket(ds(new Date(e.at)));
+        var b = pastBucket(ds(new Date(e.at)), days);
         if (!(b.key in idx)) { idx[b.key] = groups.length; groups.push({ key: b.key, label: b.label, items: [] }); }
         groups[idx[b.key]].items.push(e);
       });

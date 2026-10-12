@@ -57,10 +57,16 @@ const te=L.tadaEntries(s3,{days:365,recurring:true});assert(te.every((e,i)=>i===
 assert.strictEqual(L.fmtPast(L.today()),'Today');assert.strictEqual(L.fmtPast(L.addDays(L.today(),-1)),'Yesterday');
 console.log(L.fmtPast(L.addDays(L.today(),-3)),L.fmtPast(L.addDays(L.today(),-20)),L.fmtPast(L.addDays(L.today(),-300)),'|',L.pastBucket(L.addDays(L.today(),-5)).label,L.pastBucket(L.addDays(L.today(),-9)).label,L.pastBucket(L.addDays(L.today(),-40)).label,L.pastBucket(L.addDays(L.today(),-300)).label);
 // each of the 5 preceding days is its own bucket (distinct keys, no grouping into "past week")
+// — but only at the 7/30-day windows; at 90/365 everything rolls into month buckets instead
 const dayKeys=[2,3,4,5,6].map(n=>L.pastBucket(L.addDays(L.today(),-n)).key);
 assert.strictEqual(new Set(dayKeys).size,5);
 assert(dayKeys.every(k=>k.charAt(0)==='d'));
 assert.strictEqual(L.pastBucket(L.addDays(L.today(),-7)).key.charAt(0),'m');
+assert.strictEqual(L.pastBucket(L.today(),7).key,'today');
+assert.strictEqual(L.pastBucket(L.today(),30).key,'today');
+assert.strictEqual(L.pastBucket(L.today(),90).key.charAt(0),'m');
+assert.strictEqual(L.pastBucket(L.addDays(L.today(),-1),365).key.charAt(0),'m');
+assert.strictEqual(L.pastBucket(L.addDays(L.today(),-5),365).key.charAt(0),'m');
 // ta-da collapsible group defaults: 7-day window always open; longer windows open only
 // for today/yesterday/the individual preceding days (by-date) and collapsed otherwise, until manually toggled
 assert.strictEqual(L.tadaGroupDefaultOpen(7,'date','m2026-09'),true);
@@ -70,12 +76,19 @@ assert.strictEqual(L.tadaGroupDefaultOpen(30,'date','yesterday'),true);
 assert.strictEqual(L.tadaGroupDefaultOpen(30,'date',dayKeys[0]),true);
 assert.strictEqual(L.tadaGroupDefaultOpen(30,'date','m2026-09'),false);
 assert.strictEqual(L.tadaGroupDefaultOpen(365,'category','fitness'),false);
+// at 90/365 there's no day-level split, so today/yesterday keys never occur there; the
+// current calendar-month bucket is the one that takes over as always-open instead
+const now=new Date(),curMonthKey='m'+now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+assert.strictEqual(L.tadaGroupDefaultOpen(90,'date','today'),false);
+assert.strictEqual(L.tadaGroupDefaultOpen(90,'date',curMonthKey),true);
+assert.strictEqual(L.tadaGroupDefaultOpen(365,'date',curMonthKey),true);
+assert.strictEqual(L.tadaGroupDefaultOpen(365,'date','m2026-09'),false);
 const s3b=L.seed();
 assert.strictEqual(L.tadaGroupOpen(s3b,90,'date','m2026-09'),false);
 s3b.settings.tadaCollapse={90:{'m2026-09':false}};
 assert.strictEqual(L.tadaGroupOpen(s3b,90,'date','m2026-09'),true,'manual toggle overrides the default');
 assert.strictEqual(L.tadaGroupOpen(s3b,365,'date','m2026-09'),false,'toggle is remembered per window only');
-assert.strictEqual(L.tadaGroupOpen(s3b,90,'date','today'),true,'untouched groups keep following the default');
+assert.strictEqual(L.tadaGroupOpen(s3b,90,'date',curMonthKey),true,'untouched groups keep following the default');
 s3b.settings.tadaCollapse[90].today=true;
 assert.strictEqual(L.tadaGroupOpen(s3b,90,'date','today'),false,'a manual toggle overrides even an always-open default');
 // completing logs rec flag

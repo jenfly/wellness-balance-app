@@ -151,10 +151,15 @@ function tadaEntries(state, opts) {
     .sort((a, b) => b.at - a.at);
 }
 // Ta-da collapsible groups: the 7-day window starts fully open; longer windows start
-// collapsed except Today/Yesterday/the 5 individual preceding days, which always start open (by-date only).
+// collapsed except, by-date only: at 30 days, Today/Yesterday/the 5 individual preceding
+// days; at 90/365 days (no individual-day split there, see pastBucket), the current
+// calendar-month bucket takes over as "the recent one" and starts open instead.
 function tadaGroupDefaultOpen(days, mode, key) {
   if (days === 7) return true;
-  return mode === 'date' && (key === 'today' || key === 'yesterday' || key.charAt(0) === 'd');
+  if (mode !== 'date') return false;
+  if (days <= 30) return key === 'today' || key === 'yesterday' || key.charAt(0) === 'd';
+  const now = parseDate(today());
+  return key === 'm' + now.getFullYear() + '-' + pad(now.getMonth() + 1);
 }
 // A manual toggle (state.settings.tadaCollapse[days][key] = collapsed?) always overrides the default.
 function tadaGroupOpen(state, days, mode, key) {
@@ -170,11 +175,15 @@ function fmtPast(s) {
   if (d.getFullYear() !== new Date().getFullYear()) return d.toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' });
   return d.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' });
 }
-function pastBucket(s) {
+// `days` is the selected Ta-da window: at 7/30 the first week is split into Today/Yesterday/
+// individual days; at 90/365 everything, including this week, rolls straight into month buckets.
+function pastBucket(s, days) {
   const n = -diffDays(s), d = parseDate(s), now = parseDate(today());
-  if (n <= 0) return { key: 'today', label: 'Today' };
-  if (n === 1) return { key: 'yesterday', label: 'Yesterday' };
-  if (n < 7) return { key: 'd' + s, label: d.toLocaleDateString('en-CA', { weekday: 'long' }) };
+  if (days === undefined || days <= 30) {
+    if (n <= 0) return { key: 'today', label: 'Today' };
+    if (n === 1) return { key: 'yesterday', label: 'Yesterday' };
+    if (n < 7) return { key: 'd' + s, label: d.toLocaleDateString('en-CA', { weekday: 'long' }) };
+  }
   const sameYear = d.getFullYear() === now.getFullYear();
   const sameMonth = sameYear && d.getMonth() === now.getMonth();
   const m = d.toLocaleDateString('en-CA', { month: 'long' });
