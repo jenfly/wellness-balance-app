@@ -37,9 +37,10 @@ A small serverless function holds a Google refresh token server-side and mints f
 A hosted Postgres database with built-in authentication becomes the source of truth. Phone and computer both read and write the same central copy, which gives genuine automatic sync and removes the manual backup step.
 
 - Free tier (at time of writing): about 500 MB of database storage and 2 active projects. Far more than the data across all three apps needs (a year of completions plus check-ins is on the order of a few hundred kilobytes to a few megabytes of JSON).
+- **Important caveat: the free tier allows only 2 active projects, and there are 3 apps** (this app, the journal app and the Meal Planner). Giving each app its own Supabase project does not fit. The practical path is to **share one Supabase project across all three apps**, keeping each app's data separate with its own tables (or its own schema) and per-user access rules, rather than separate projects. This is purely an organizational choice and stays comfortably within the storage limits. Trade-offs of sharing: one sign-in system and one database for all three apps (which is also convenient, since it is one login), and an outage, pause or mistake in that project affects all three at once. The alternatives are paying to go beyond two projects, or leaving one app on the current `localStorage` plus Drive pattern.
 - Caveat: free projects auto-pause after about a week of inactivity, so the first request after a dormant period may be slow or fail while the database wakes. The app would need to handle that gracefully rather than look broken. A tiny scheduled ping is a common workaround.
 - Offline: Supabase on its own is not offline-capable. Losing connectivity would break writes or queue them awkwardly. Today the app works with no internet at all, and that is worth keeping, so the realistic design is: keep `localStorage` or IndexedDB as the fast local copy the app always reads and writes, and add a background sync layer that pushes changes to Supabase and pulls changes from other devices. That sync layer (conflict handling, "last write wins" or merging, retry when back online) is most of the real work.
-- What would be involved, per app: a Supabase project and table design, sign-in so data is per user, rewriting the save and load paths, and building the offline cache and sync layer. Roughly a multi-day project per app, much of it reusable across the three if designed once.
+- What would be involved: a Supabase project (shared, per the caveat above) and, per app, a table design, sign-in so data is per user, rewriting the save and load paths, and building the offline cache and sync layer. Roughly a multi-day project per app, much of it reusable across the three if designed once.
 - A single-document design (store the whole app state as one JSON row per user, as the app already does in `localStorage`) would be much simpler than normalizing items, categories and log entries into separate tables, at the cost of coarse conflict handling (whole-document last write wins).
 
 ### Smaller alternatives mentioned in passing
@@ -54,6 +55,7 @@ Supabase-style sync is the only listed option that addresses what is actually bo
 ## If this is revisited
 
 - Decide whether to solve it for one app first or design the sync layer once for all three (the author's stated preference is a single solution for all three).
+- Plan for a single shared Supabase project (the free tier's 2-project limit rules out one per app), and decide how each app's data is separated inside it (tables or schemas, with per-user access rules).
 - Decide the data model: one JSON document per user (simple, matches today) versus real tables (queries and finer-grained merging, much more work).
 - Decide the conflict rule when two devices edit while apart.
 - Check how the free tier's pause behavior feels in practice for apps that may sit unopened for days.
