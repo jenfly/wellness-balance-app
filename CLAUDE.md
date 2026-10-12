@@ -19,13 +19,14 @@ then open `http://localhost:8000`. If the service worker is active, hard-reload 
 cd tests
 export NODE_PATH=<path to node_modules containing jsdom>   # npm i jsdom
 ./bundle.sh            # rebuild tests/balance-tiles.html (required after editing index.html/css/js)
-node test.js             # pure logic tests (js/logic.js)
-node smoke2.js           # ...through smoke10.js — jsdom UI smoke tests
+node test.js             # pure logic tests (js/logic.js), including syncPlan/canonJSON
+node smoke2.js           # ...through smoke11.js — jsdom UI smoke tests
+node smoke12.js          # sync.js against a fake in-memory Supabase (no real network/auth)
 node empty.js            # needs a static server on the port hardcoded in the file:
                           #   (cd .. && python3 -m http.server 8125)
                           # checks a fresh install starts with 3 starter tiles + Inbox
 ```
-- `bundle.sh` concatenates `css/styles.css`, the `index.html` body, `js/logic.js`, `tests/sample-data.js`, and `js/ui.js` into one file, swapping `emptyState()` for `seed()` so the UI tests have data to work with.
+- `bundle.sh` concatenates `css/styles.css`, the `index.html` body, `js/logic.js`, `js/sync.js`, `tests/sample-data.js`, and `js/ui.js` into one file, swapping `emptyState()` for `seed()` so the UI tests have data to work with.
 - `tests/sample-data.js` is invented, safe-to-commit test data. Keep real personal data out of the repo.
 - Changing UI strings/structure/markup will likely break smoke test selectors — expect to update them alongside the change.
 - jsdom's "Not implemented: window.scrollTo" console message is harmless noise.
@@ -36,12 +37,13 @@ There is no lint/build command; there are no bundler, transpiler, or type-checke
 
 ## Architecture
 
-Three script files loaded as classic `<script>` tags (no ES modules) in this order: `js/logic.js` then `js/ui.js`.
+Script files loaded as classic `<script>` tags (no ES modules) in this order: `js/logic.js`, then `js/sync.js`, then `js/ui.js`.
 
-- **`js/logic.js`** — pure functions only (dates, sorting, check-in math, state defaults/migrations). No DOM access. Exported via `module.exports` when `typeof module !== 'undefined'`, which is how `tests/test.js` consumes it directly in Node.
-- **`js/ui.js`** — a single IIFE. Renders by building HTML strings (no templating library, no virtual DOM) and re-rendering wholesale into `#main`/`#overlay-root`/`#sheet-root`. All interactivity goes through one delegated `click`/`change`/`submit` handler keyed off `data-action` attributes on elements — there are no per-element listeners. Drag-and-drop (mouse and touch) is hand-rolled via `pointerdown`/`pointermove`/`pointerup` (long-press 500ms to start on touch; grips start immediately). The phone/gesture back button is wired to `history.pushState`/`popstate` (`navLayers()`/`closeNavLayersTo()`/`syncNavHistory()`): being away from the Home tab, having a tile overlay open, an inline item-edit form open, or a sheet (settings/add-item) open each count as one "layer," so back unwinds one layer at a time instead of exiting the app. New modal-like UI should be added to `navLayers()`/`closeNavLayersTo()` to stay back-button-aware.
+- **`js/logic.js`** — pure functions only (dates, sorting, check-in math, state defaults/migrations, the cloud-sync decision table). No DOM access. Exported via `module.exports` when `typeof module !== 'undefined'`, which is how `tests/test.js` consumes it directly in Node.
+- **`js/sync.js`** — optional cloud sync against a shared Supabase project (`window.Sync`). No DOM access beyond `localStorage`/`document.activeElement` via its `cfg.busy()` caller; see "Cloud sync (Supabase)" below for the full design. Self-contained: if `js/ui.js` never called `Sync.init()`, the file would just sit there inert.
+- **`js/ui.js`** — a single IIFE. Renders by building HTML strings (no templating library, no virtual DOM) and re-rendering wholesale into `#main`/`#overlay-root`/`#sheet-root`. All interactivity goes through one delegated `click`/`change`/`submit` handler keyed off `data-action` attributes on elements — there are no per-element listeners. Drag-and-drop (mouse and touch) is hand-rolled via `pointerdown`/`pointermove`/`pointerup` (long-press 500ms to start on touch; grips start immediately). The phone/gesture back button is wired to `history.pushState`/`popstate` (`navLayers()`/`closeNavLayersTo()`/`syncNavHistory()`): being away from the Home tab, having a tile overlay open, an inline item-edit form open, or a sheet (settings/add-item, including the sync "choose" prompt, which reuses the settings sheet) open each count as one "layer," so back unwinds one layer at a time instead of exiting the app. New modal-like UI should be added to `navLayers()`/`closeNavLayersTo()` to stay back-button-aware.
 - **`css/styles.css`** — all styling, including theme tokens. Light tokens live on `:root`; dark tokens are defined twice — once under `@media (prefers-color-scheme: dark)` guarded by `:root:not([data-theme="light"])`, and again under `:root[data-theme="dark"]` — so both the OS-default and the explicit in-app theme toggle work. **Any new color must be added as a token in all three places.** Low-saturation per-category swatches (teal, apricot, sky, clay, sand, slate, lilac, rose, moss, plum, sage) keep categories visually distinct but calm.
-- **`sw.js`** — offline-cache service worker. Same-origin requests: cache-first, refreshed in the background. Google Fonts (Figtree body / Newsreader display) requests: cached after first load. **`VERSION` must be bumped whenever any cached app file changes**, and any new file must be added to the `SHELL` array, or installed phones keep serving stale copies.
+- **`sw.js`** — offline-cache service worker. Same-origin requests: cache-first, refreshed in the background. Google Fonts (Figtree body / Newsreader display) requests: cached after first load. Cross-origin Supabase (`*.supabase.co`) requests bypass the cache entirely, same as Google Drive/Identity Services. **`VERSION` must be bumped whenever any cached app file changes**, and any new file must be added to the `SHELL` array, or installed phones keep serving stale copies.
 - **`index.html`** — markup shell plus the three `<script>` tags; registers the service worker on load.
 
 ### State
@@ -69,6 +71,7 @@ Single JSON blob in `localStorage` under key `well-tended-v1`, written by `save(
 - Category ids in `emptyState()` are plain strings (`fitness`, `tasks`, `notes`); new ones use `uid('c')`.
 - Persisted data from older shapes is migrated inside `load()`/`normalize()` (e.g. missing `icon` becomes `null`, missing `later` becomes `false`). Add new migrations there rather than assuming a fresh shape. `normalize()` also stamps `state.version = 1` (used to validate Google Drive backups on restore, not yet branched on for in-app migrations).
 - Fresh install starts with three generic starter categories (Fitness, Tasks, Notes) plus the virtual Inbox, seeded with sample items that double as a tutorial (`emptyState()` in `js/logic.js`).
+- Cloud sync keeps a few more `localStorage` keys alongside the main one, all owned by `js/sync.js`: `jenfly-supabase-auth` (the Supabase Auth session — this exact key is shared across all three sibling apps on `jenfly.github.io`, so signing in or out in one signs out of all of them), `well-tended-v1:sync-meta` (this device's view of where it last stood with the cloud: `{ userId, remoteAt, dirty, editedAt, syncedAt }`), and `well-tended-v1:pre-sync-copy` (the one-time safety copy of whatever side of a conflict just got replaced — see "Cloud sync (Supabase)" below).
 
 ## Behavior spec (decisions already made — ask before changing)
 
@@ -112,7 +115,12 @@ Single JSON blob in `localStorage` under key `well-tended-v1`, written by `save(
 
 **Google Drive backup/restore — built**, not a placeholder. Settings sheet's "Backup and restore" section: manual backup/restore triggered from settings (no continuous sync), Google Identity Services token flow (`google.accounts.oauth2.initTokenClient`) scoped to `drive.file` only (access limited to the single file this app creates), single backup file `well-tended-backup.json` via Drive REST v3 multipart upload, file id cached in `localStorage`. Restore downloads and validates the backup first, then asks for inline two-tap confirmation (`ui.restoreOffer`, never a `confirm()`) before replacing state; an "Undo" toast appears right after. Backup JSON is `{ version: 1, exportedAt, state }`. A banner nudges a backup if it's been 30+ days since the last one (`backupBannerHTML()`).
 - Needs a one-time setup per deployment: a Google Cloud OAuth client ID pasted into the `GOOGLE_CLIENT_ID` constant in `js/ui.js` (see README.md "Setting up Google Drive backup" for the exact steps). `driveConfigured()` gates this — if it's unset, tapping Backup/Restore shows a plain-language toast instead of failing silently.
-- The service worker must keep ignoring non-same-origin hosts other than Google Fonts (Drive/GIS requests go straight to the network, uncached).
+- The service worker must keep ignoring non-same-origin hosts other than Google Fonts (Drive/GIS/Supabase requests go straight to the network, uncached).
+
+**Cloud sync (Supabase) — built**, pilot app for a layer shared with two sibling apps (`meal-planner`, `journal-app`); see `misc/supabase-sync-handoff.md` and `misc/future-sync-backup-options.md` for the full design history. Settings sheet's "Sync across devices" section, above "Backup and restore": optional, works exactly as before until signed in. One shared Supabase project/table (`app_data`, one `doc jsonb` row per user per app), Supabase Auth with Google via PKCE (`js/sync.js`), `localStorage` stays the always-used local copy so the app is still offline-first and instant — sync only pushes/pulls in the background. Conflict rule is whole-document last-write-wins by server `updated_at`, decided by the pure `syncPlan()` in `js/logic.js` (`push-new` / `adopt` / `choose` / `noop` / `push` / `pull` / `overwrite`); first link of a device to an account with a different existing cloud copy asks the user which to keep (`status().choice`, `resolveChoice('cloud'|'device')`), and whichever copy gets replaced is saved once in `localStorage` at `well-tended-v1:pre-sync-copy`. `js/ui.js` wires this up via `Sync.init({ key, getState, applyState, busy, onChange, onError, onPulled })`: `save()` calls `Sync.noteLocalChange()`; `applyState()` normalizes and renders an incoming remote doc with a plain "Updated from another device" toast (no undo — the pre-sync copy is the recovery path); `busy()` blocks a pull while a form/sheet/check-in edit/the notes editor has focus, so it never clobbers in-progress input.
+- Google Drive backup stays in place as a safety net during the transition and is unrelated to this — a user can have one, both, or neither configured.
+- No dependencies, no build step: `js/sync.js` talks to Supabase Auth and PostgREST with plain `fetch`, no `supabase-js` or CDN script. Don't add one without asking.
+- Signing in or out is shared with Meal Planner and the journal app (same `jenfly-supabase-auth` localStorage key, same origin) — say so in the sign-in/sign-out hints rather than letting it surprise someone switching apps.
 
 **Device verification** (install, offline mode, service-worker update path, touch drag-and-drop, safe-area insets with the bottom tab bar/FAB on Android gesture nav) has since been confirmed working on a real phone.
 

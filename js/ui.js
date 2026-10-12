@@ -78,7 +78,7 @@
     return emptyState();
   }
   var lastRaw = null; // last string we wrote to / read from localStorage, so syncFromStorage() can spot outside changes
-  function save() { try { lastRaw = JSON.stringify(state); localStorage.setItem(KEY, lastRaw); } catch (e) { /* ignore */ } }
+  function save() { try { lastRaw = JSON.stringify(state); localStorage.setItem(KEY, lastRaw); } catch (e) { /* ignore */ } if (window.Sync) Sync.noteLocalChange(); }
 
   var state = load();
   try { lastRaw = localStorage.getItem(KEY); } catch (e) { /* storage unavailable */ }
@@ -601,7 +601,8 @@
       '<p class="hint">Checking off a batch-cook item in Meal Planner offers to log &ldquo;Make &hellip;&rdquo; here. The category is remembered by ID, so renaming it is safe.</p></section>';
   }
   function settingsHTML() {
-    return backupSectionHTML() +
+    return syncSectionHTML() +
+      backupSectionHTML() +
       tagsSectionHTML() +
       mealLinkSectionHTML() +
       '<section><h4>Check-in reminder</h4><p class="hint">Well Tended shows a dot on the Check-in tab when it&rsquo;s been a while &mdash; no push notifications.</p>' +
@@ -662,6 +663,70 @@
     el.hidden = false;
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { el.hidden = true; }, 5000);
+  }
+
+  /* ---------- Cloud sync (Supabase) ----------
+     Optional: the app behaves exactly as before until signed in. sync.js owns all
+     network/auth/conflict logic (see its header comment); this just wires it to app
+     state and the settings UI. */
+  function applyState(doc) {
+    state = normalize(JSON.parse(JSON.stringify(doc)));
+    if (ui.openCat && !catOf(ui.openCat)) ui.openCat = null;
+    if (ui.tag && state.tags.indexOf(ui.tag) < 0) ui.tag = null;
+    save();
+    renderAll();
+    toast('Updated from another device', false);
+  }
+  function busy() {
+    if (ui.formFor || ui.dateFor || ui.ciEdit) return true;
+    if (ui.sheet && ui.sheet.kind !== 'settings') return true;
+    var ae = document.activeElement;
+    return !!(ae && ae.id === 'notes-editor');
+  }
+  function onSyncChange() {
+    if (ui.sheet && ui.sheet.kind === 'settings') renderSheet();
+    if (window.Sync && Sync.status().phase === 'choose' && !ui.sheet) { ui.sheet = { kind: 'settings' }; renderSheet(); syncNavHistory(); }
+  }
+  function onSyncError(msg) { toast(msg, false); }
+  if (window.Sync) {
+    Sync.init({ key: KEY, getState: function () { return state; }, applyState: applyState, busy: busy, onChange: onSyncChange, onError: onSyncError, onPulled: function () {} });
+  }
+  function syncAgoText(ms) {
+    var s = Math.max(0, Math.round((Date.now() - ms) / 1000));
+    if (s < 60) return 'moments ago';
+    var m = Math.round(s / 60);
+    if (m < 60) return m + ' min ago';
+    var h = Math.round(m / 60);
+    if (h < 24) return h + (h === 1 ? ' hour ago' : ' hours ago');
+    var d = Math.round(h / 24);
+    return d + (d === 1 ? ' day ago' : ' days ago');
+  }
+  function syncStatusText(st) {
+    if (st.phase === 'signing-in') return 'Signing in…';
+    if (st.phase === 'syncing') return 'Syncing…';
+    if (st.phase === 'offline') return 'Offline — will sync when back online.';
+    if (st.phase === 'error') return st.dirty ? 'Couldn’t sync — will retry.' : 'Couldn’t sync. Try “Sync now”.';
+    if (st.dirty) return 'Syncing…';
+    return st.syncedAt ? ('Synced ' + syncAgoText(st.syncedAt)) : 'Not synced yet.';
+  }
+  function syncCounts(cats, items) { return cats + (cats === 1 ? ' category' : ' categories') + ', ' + items + (items === 1 ? ' item' : ' items'); }
+  function syncSectionHTML() {
+    if (!window.Sync) return '';
+    var st = Sync.status(), head = '<h4>Sync across devices</h4>';
+    if (st.choice) {
+      return '<section>' + head +
+        '<p class="hint">This device and your Supabase account (' + esc(st.email || '') + ') have different data. Cloud: ' + syncCounts(st.choice.cats, st.choice.items) + '. This device: ' + syncCounts(state.cats.length, state.items.length) + '. Pick one to keep — the other is replaced, but saved once on this device in case you need it back.</p>' +
+        '<div class="form-actions"><button class="btn primary" data-action="sync-use-cloud">Use cloud copy</button><button class="btn" data-action="sync-use-device">Keep this device&rsquo;s copy</button></div></section>';
+    }
+    if (!st.signedIn) {
+      return '<section>' + head +
+        '<p class="hint">Sign in to keep this app in sync across your devices automatically. This signs you into Meal Planner and the journal app too &mdash; they share one sign-in.</p>' +
+        '<div class="form-actions"><button class="btn primary" data-action="sync-signin">Sign in with Google</button></div></section>';
+    }
+    return '<section>' + head +
+      '<p class="hint">Signed in as ' + esc(st.email) + '. ' + esc(syncStatusText(st)) + '</p>' +
+      '<div class="form-actions"><button class="btn" data-action="sync-now">Sync now</button><button class="btn" data-action="sync-signout">Sign out</button></div>' +
+      '<p class="hint">Signing out signs you out of Meal Planner and the journal app too, since they share one sign-in.</p></section>';
   }
 
   /* ---------- Google Drive backup ----------
@@ -969,6 +1034,11 @@
       case 'restore-drive': doRestoreCheck(); break;
       case 'restore-confirm': doRestoreConfirm(); break;
       case 'restore-cancel': ui.restoreOffer = null; renderSheet(); break;
+      case 'sync-signin': if (window.Sync) Sync.signIn(); break;
+      case 'sync-signout': if (window.Sync) { Sync.signOut(); toast('Signed out.', false); } break;
+      case 'sync-now': if (window.Sync) Sync.syncNow(); break;
+      case 'sync-use-cloud': if (window.Sync) Sync.resolveChoice('cloud'); break;
+      case 'sync-use-device': if (window.Sync) Sync.resolveChoice('device'); break;
     }
     syncNavHistory();
   });

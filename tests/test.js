@@ -128,3 +128,23 @@ assert.deepStrictEqual(L.checkinHistoryInRange(hist,10,now2).map(e=>e.id),['h1',
 assert.deepStrictEqual(L.checkinHistoryInRange(hist,9,now2).map(e=>e.id),['h2']);
 assert.deepStrictEqual(L.checkinHistoryInRange([],90,now2),[]);
 console.log('checkin history ok');
+// cloud sync decision (syncPlan) and canonJSON
+const noMeta=()=>({userId:'u1',remoteAt:null,dirty:false,editedAt:null,syncedAt:null});
+assert.strictEqual(L.syncPlan(noMeta(),null,false),'push-new','no cloud copy yet');
+assert.strictEqual(L.syncPlan(noMeta(),{updated_at:'t0',doc:{}},true),'adopt','first link, copies already match');
+assert.strictEqual(L.syncPlan(noMeta(),{updated_at:'t0',doc:{}},false),'choose','first link, copies differ');
+let m=Object.assign(noMeta(),{remoteAt:'t0',dirty:false});
+assert.strictEqual(L.syncPlan(m,{updated_at:'t0',doc:{}},true),'noop','nothing changed anywhere');
+m=Object.assign(noMeta(),{remoteAt:'t0',dirty:true,editedAt:Date.now()});
+assert.strictEqual(L.syncPlan(m,{updated_at:'t0',doc:{}},true),'push','only this device changed');
+m=Object.assign(noMeta(),{remoteAt:'t0',dirty:false});
+assert.strictEqual(L.syncPlan(m,{updated_at:'t1',doc:{}},false),'pull','cloud changed elsewhere, nothing unsynced here');
+m=Object.assign(noMeta(),{remoteAt:'t0',dirty:true,editedAt:Date.parse('2026-01-01T00:00:05Z')});
+assert.strictEqual(L.syncPlan(m,{updated_at:'2026-01-01T00:00:00Z',doc:{}},false),'overwrite','both changed, this device is newer');
+m=Object.assign(noMeta(),{remoteAt:'t0',dirty:true,editedAt:Date.parse('2026-01-01T00:00:00Z')});
+assert.strictEqual(L.syncPlan(m,{updated_at:'2026-01-01T00:00:05Z',doc:{}},false),'pull','both changed, the cloud copy is newer');
+assert.strictEqual(L.canonJSON({b:1,a:2}),L.canonJSON({a:2,b:1}),'key order does not matter');
+assert.notStrictEqual(L.canonJSON({a:1}),L.canonJSON({a:2}));
+assert.strictEqual(L.canonJSON({a:[1,{y:2,x:1}]}),L.canonJSON({a:[1,{x:1,y:2}]}));
+assert.strictEqual(L.canonJSON({a:undefined,b:1}),L.canonJSON({b:1}),'undefined keys are dropped, matching how jsonb round-trips');
+console.log('sync plan ok');
