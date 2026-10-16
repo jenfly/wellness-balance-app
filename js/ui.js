@@ -93,7 +93,17 @@
   function plural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
 
   /* ---------- Tiles view ---------- */
+  // Long-pressed checkbox on a collapsed tile: a stacked "Mark done on" editor (the tile is too narrow
+  // for the one-line version). data-action="noop" keeps taps inside it from opening the tile.
+  function peekDateRow(i) {
+    return '<li class="pk pk-date" data-action="noop"><div class="pk-body"><span class="pk-t">' + esc(i.text) + '</span>' +
+      '<span class="de-label">Mark done on</span>' +
+      '<input type="date" id="de-' + i.id + '" value="' + today() + '" max="' + today() + '" aria-label="Mark done on">' +
+      '<div class="pk-de-btns"><button type="button" class="icon-btn" data-action="date-cancel" data-id="' + i.id + '" aria-label="Cancel">' + icon('x') + '</button>' +
+      '<button type="button" class="icon-btn de-save" data-action="date-confirm" data-id="' + i.id + '" aria-label="Mark done">' + icon('check') + '</button></div></div></li>';
+  }
   function peekRow(i) {
+    if (ui.dateFor === i.id && !ui.openCat) return peekDateRow(i);
     var meta = '';
     if (i.pinned) meta += '<span class="pin" aria-label="Pinned">' + icon('pin') + '</span>';
     if (i.type === 'recurring') meta += '<span class="rep" aria-label="Repeats">' + icon('repeat') + '</span>';
@@ -1237,7 +1247,7 @@
   var press = null, suppressToggleClick = false;
   function clearPress() { if (press) clearTimeout(press.timer); press = null; }
   document.addEventListener('pointerdown', function (e) {
-    var btn = e.target.closest('#overlay-root [data-action="item-toggle"], #main .up-group [data-action="item-toggle"]');
+    var btn = e.target.closest('#overlay-root [data-action="item-toggle"], #main .up-group [data-action="item-toggle"], #main .peek [data-action="item-toggle"]');
     if (!btn || drag || swp) return;
     var id = btn.dataset.id, it = state.items.find(function (x) { return x.id === id; });
     if (!it || it.done) return;
