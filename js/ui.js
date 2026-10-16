@@ -157,6 +157,7 @@
   }
   /* ---------- Upcoming view ---------- */
   function upRow(i, mode, bucketKey) {
+    if (ui.dateFor === i.id && !ui.openCat) return dateRowHTML(i); // long-pressed checkbox: inline "Mark done on" editor
     var c = catOf(i.catId) || INBOX, meta = '';
     if (i.type === 'recurring' && i.freq) meta += '<span class="kind">' + icon('repeat') + 'every ' + esc(freqText(i.freq)) + '</span>';
     if (mode === 'category' || (bucketKey !== 'today' && bucketKey !== 'tomorrow' && bucketKey.indexOf('d') !== 0)) meta += '<span class="due">' + esc(fmtDue(i.due)) + '</span>';
@@ -822,7 +823,7 @@
     if (!t) return;
     var a = t.dataset.action, id = t.dataset.id, it;
     switch (a) {
-      case 'tab': ui.tab = t.dataset.tab; ui.editTiles = false; ui.delAsk = null; if (ui.tab !== 'checkin') { ui.ciEdit = false; ui.ciDraft = null; ui.ciHistorySel = null; } if (ui.tab !== 'tada') ui.tadaMore = {}; renderMain(); window.scrollTo(0, 0); break;
+      case 'tab': ui.tab = t.dataset.tab; ui.editTiles = false; ui.delAsk = null; ui.dateFor = null; if (ui.tab !== 'checkin') { ui.ciEdit = false; ui.ciDraft = null; ui.ciHistorySel = null; } if (ui.tab !== 'tada') ui.tadaMore = {}; renderMain(); window.scrollTo(0, 0); break;
       case 'open-cat': ui.openCat = id; ui.formFor = null; ui.dateFor = null; ui.reorder = false; ui.showDone = false; renderOverlay(); break;
       case 'close-overlay': ui.openCat = null; ui.formFor = null; ui.dateFor = null; renderAll(); break;
       case 'filter': ui.tag = t.dataset.tag || null; renderMain(); renderOverlay(); break;
@@ -865,9 +866,9 @@
         break;
       }
       case 'date-edit': ui.dateFor = id; renderOverlay(); break;
-      case 'date-cancel': ui.dateFor = null; renderOverlay(); break;
+      case 'date-cancel': ui.dateFor = null; renderAll(); break;
       case 'date-confirm': {
-        var dIn = $('#overlay-root #de-' + id), dVal = dIn && dIn.value;
+        var dIn = $('#de-' + id), dVal = dIn && dIn.value;
         it = state.items.find(function (x) { return x.id === id; });
         if (!it || !dVal) break;
         var ms = Math.min(parseDate(dVal).getTime(), Date.now());
@@ -877,7 +878,7 @@
           it.doneAt = ms;
           var log = state.log.find(function (l) { return l.itemId === id && l.at === oldAt; });
           if (log) log.at = ms;
-          ui.dateFor = null; save(); renderOverlay(); toast('Completion date updated', true);
+          ui.dateFor = null; save(); renderAll(); toast('Completion date updated', true);
         } else {
           var r2 = completeItem(state, id, ms);
           ui.dateFor = null;
@@ -1236,13 +1237,13 @@
   var press = null, suppressToggleClick = false;
   function clearPress() { if (press) clearTimeout(press.timer); press = null; }
   document.addEventListener('pointerdown', function (e) {
-    var btn = e.target.closest('#overlay-root [data-action="item-toggle"]');
+    var btn = e.target.closest('#overlay-root [data-action="item-toggle"], #main .up-group [data-action="item-toggle"]');
     if (!btn || drag || swp) return;
     var id = btn.dataset.id, it = state.items.find(function (x) { return x.id === id; });
     if (!it || it.done) return;
     press = { pid: e.pointerId, sx: e.clientX, sy: e.clientY, timer: setTimeout(function () {
       press = null;
-      ui.dateFor = id; renderOverlay();
+      ui.dateFor = id; renderAll();
       suppressToggleClick = true;
       setTimeout(function () { suppressToggleClick = false; }, 80);
     }, 500) };
