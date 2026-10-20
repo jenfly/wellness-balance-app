@@ -545,7 +545,9 @@
       (less.length ? collapsibleSectionHTML('less', 'Less frequent', 'Repeats every 2 months or less often.', less, !!cs.less) : '') +
       (later.length ? collapsibleSectionHTML('later', 'For later', null, later, !!cs.later) : '') +
       (!open.length ? '<p class="hint">' + (ui.tag ? 'Nothing with this tag' : 'Nothing open here. Tap + to add something.') + '</p>' : '') +
-      (done.length ? '<div class="done-bar"><button class="done-toggle" data-action="toggle-done" aria-expanded="' + ui.showDone + '">Done (' + done.length + ') ' + (ui.showDone ? 'hide' : 'show') + '</button><button class="text-btn" data-action="clear-done">Clear</button></div>' + (ui.showDone ? '<ul class="items">' + done.map(rowHTML).join('') + '</ul>' : '') : '') +
+      (done.length ? '<h3 class="sec-title"><button type="button" class="sec-toggle" data-action="toggle-done" aria-expanded="' + !!ui.showDone + '">' +
+        '<span>Done (' + done.length + ')</span>' + icon(ui.showDone ? 'up' : 'down') + '</button></h3>' +
+        (ui.showDone ? '<div class="done-actions"><button type="button" class="text-btn" data-action="clear-done">Clear</button></div><ul class="items">' + done.map(rowHTML).join('') + '</ul>' : '') : '') +
       '</div></div>';
     root.innerHTML = html;
     root.querySelector('.overlay').scrollTop = st;

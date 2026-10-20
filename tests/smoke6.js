@@ -56,9 +56,11 @@ assert(!heads().some(x=>x.startsWith('Yesterday'))&&!heads().some(x=>x.startsWit
 // persists across tab switches
 click('[data-tab=upcoming]');click('[data-tab=tada]');assert(d.querySelector('input[name=tada-days][value="365"]').checked);
 // clear done in a tile
-click('[data-tab=tiles]');click('.tile[data-id=shopping]');assert(d.querySelector('.done-bar'));
-click('[data-action=clear-done]');assert(!d.querySelector('.done-bar'));
-click('[data-action=undo]');assert(d.querySelector('.done-bar'));
+click('[data-tab=tiles]');click('.tile[data-id=shopping]');assert(d.querySelector('[data-action=toggle-done]'));
+assert(!d.querySelector('[data-action=clear-done]'));
+click('[data-action=toggle-done]');assert(d.querySelector('.done-actions [data-action=clear-done]'));
+click('[data-action=clear-done]');assert(!d.querySelector('[data-action=toggle-done]'));
+click('[data-action=undo]');assert(d.querySelector('[data-action=toggle-done]'));
 click('[data-action=clear-done]');click('[data-action=close-overlay]');
 // history survives clearing
 click('[data-tab=tada]');assert([...d.querySelectorAll('.row-text')].some(x=>x.textContent==='Return the borrowed ladder'));

@@ -208,7 +208,6 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stro
 .row-ctl .icon-btn[disabled]{opacity:.3}
 .row.done .row-text{text-decoration:line-through;color:var(--muted)}
 .done-date{color:var(--muted);font-size:13px;padding:10px 6px}
-.done-toggle{margin-top:16px;border:0;background:none;color:var(--muted);font-weight:600;padding:10px 0}
 .date-edit .row-content{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .de-main{display:flex;flex-direction:column;gap:2px;flex:1 1 140px;min-width:0}
 .de-main .row-text{font-size:14px}
@@ -322,8 +321,8 @@ body.dragging{cursor:grabbing;-webkit-user-select:none;user-select:none}
 .up-group.drop-eligible .up-h{outline:2px dashed var(--accent);outline-offset:6px;border-radius:8px}
 .up-group.drop-hover{background:var(--chip);border-radius:12px}
 .up-group.drop-hover .up-h{outline:none;background:var(--accent);color:var(--accent-ink);padding:4px 10px;margin:16px -10px 4px;border-radius:8px}
-.done-bar{display:flex;align-items:center;justify-content:space-between;margin-top:16px}
-.done-bar .done-toggle{margin-top:0}
+.done-actions{display:flex;justify-content:flex-start;margin:0 0 4px}
+.done-actions .text-btn{padding-left:0}
 .tabicon{position:relative;display:inline-grid}
 .tabdot{position:absolute;top:-3px;right:-6px;width:12px;height:12px;border-radius:50%;background:var(--apricot-dot);border:2px solid var(--surface)}
 .ci-head{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:46px}
